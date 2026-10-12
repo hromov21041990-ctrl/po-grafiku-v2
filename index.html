@@ -126,7 +126,13 @@ h3{font-size:17px}
 @media(max-width:1050px){.auth-layout{grid-template-columns:1fr}.auth-story{position:static;padding:8px 0 0}.auth-story h1{font-size:38px}.benefits{display:grid;grid-template-columns:repeat(3,1fr);max-width:none;gap:10px}.benefit{align-items:flex-start}.benefit-icon{display:none}.auth-card{max-width:760px;width:100%}}
 @media(max-width:700px){.page{padding:0 14px 34px}.topbar{height:76px}.brandname{font-size:19px}.brandmark{width:38px;height:38px}.topbadge{font-size:10px;padding:6px 9px}.auth-layout{gap:10px;padding-top:19px}.auth-story h1{font-size:30px;letter-spacing:-1px}.auth-story>p{font-size:14px}.benefits{display:none}.auth-card,.card{padding:18px}.grid-form{grid-template-columns:1fr 1fr;gap:12px}.hero{align-items:flex-start;flex-direction:column}.hero h1{font-size:27px}.metrics{gap:8px}.metric{padding:13px;min-height:104px}.metric strong{font-size:20px}.metric .metric-label{font-size:11px}.metric small{font-size:10px}.weektable{min-width:650px}.weektable th:first-child{width:116px}.weektable th,.weektable td{padding:9px}.weektable .daycell{padding:13px 8px}.slot{padding:9px}.slotbtn{padding:9px}.week-nav{width:100%}.work-card .grid-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.metrics{grid-template-columns:1fr 1fr}.metrics .metric:last-child{grid-column:span 2}.auth-card .grid-form{grid-template-columns:1fr}.auth-card .formfield.wide{grid-column:1}.week-nav input{width:145px}.topbadge{display:none}}
-.pass-wrap{display:flex;gap:6px;align-items:stretch}.pass-wrap input{flex:1;min-width:0}.pass-wrap button{flex:0 0 43px;padding:8px;background:#f7f6ff;color:#5547ad}.recovery-panel{background:#f3f0ff;border:1px solid #d8d0fc;border-radius:12px;padding:15px;margin:16px 0;overflow-wrap:anywhere}.recovery-code{font:700 15px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;user-select:all;letter-spacing:.6px}.text-link{border:0;background:none!important;color:#6754d7!important;text-decoration:underline;padding:8px 0}.security-box{border-top:1px solid var(--line);padding-top:22px;margin-top:22px}.security-message{color:#2e735c;font-size:13px;font-weight:650;overflow-wrap:anywhere}</style><link rel="stylesheet" href="./mobile.css"><style id="brand-theme">
+.pass-wrap{display:flex;gap:6px;align-items:stretch}.pass-wrap input{flex:1;min-width:0}.pass-wrap button{flex:0 0 43px;padding:8px;background:#f7f6ff;color:#5547ad}.recovery-panel{background:#f3f0ff;border:1px solid #d8d0fc;border-radius:12px;padding:15px;margin:16px 0;overflow-wrap:anywhere}.recovery-code{font:700 15px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;user-select:all;letter-spacing:.6px}.text-link{border:0;background:none!important;color:#6754d7!important;text-decoration:underline;padding:8px 0}.security-box{border-top:1px solid var(--line);padding-top:22px;margin-top:22px}.security-message{color:#2e735c;font-size:13px;font-weight:650;overflow-wrap:anywhere} .payroll-toolbar{display:flex;align-items:end;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:10px 0}
+.payroll-toolbar label{font-size:12px;font-weight:750;color:#657987}
+.payroll-toolbar select{display:block;margin-top:5px;min-width:220px}
+.payroll-note{font-size:12px;color:#687d88;margin:3px 0 13px}
+.payroll-total{background:#E6F9F3}
+@media(max-width:767px){.payroll-toolbar{align-items:stretch;flex-direction:column}.payroll-toolbar select,.payroll-toolbar button{width:100%}.payroll-report{display:block;min-width:0}.payroll-report thead{display:none}.payroll-report tbody{display:grid;gap:11px}.payroll-report tr{display:grid;grid-template-columns:1fr 1fr;padding:13px;border:1px solid #dce6e8;border-radius:15px;background:#fff}.payroll-report td{border:0!important;padding:5px!important;font-size:13px}.payroll-report td:first-child{grid-column:1/-1;font-size:16px;font-weight:800}.payroll-report td:nth-child(2):before{content:"Смен: ";color:#73858d}.payroll-report td:nth-child(3):before{content:"Часов: ";color:#73858d}.payroll-report td:nth-child(4):before{content:"Начислено: ";color:#73858d}.payroll-report td:nth-child(4){grid-column:1/-1;font-weight:750}.payroll-report td:nth-child(5){grid-column:1/-1}.payroll-report td:nth-child(5) button{width:100%;min-height:42px}.payroll-report .payroll-total{background:#E6F9F3}}
+</style><link rel="stylesheet" href="./mobile.css"><style id="brand-theme">
 /* По графику — фирменный интерфейс, поверх базовых и мобильных стилей */
 :root{--bg:#F3F5F7;--surface:#fff;--ink:#0F2D3D;--muted:#637684;--line:#E5EAF0;--brand:#22C998;--brand-dark:#0DAE80;--brand-soft:#E6F9F3;--good:#059E74;--good-bg:#EAFCF5;--danger:#C65656;--shadow:0 9px 28px rgba(15,45,61,.065)}
 body{background:var(--bg);color:var(--ink)}
@@ -468,7 +474,8 @@ body.help-open{overflow:hidden}
   </section>
   <section id="paySection" class="card pay-card hide">
    <div class="card-header"><div><h2>Еженедельные выплаты</h2><p>Начисления по назначенным сменам выбранной недели</p></div></div>
-   <div id="pay" class="table-scroll"></div>
+   <div class="payroll-toolbar"><label for="payrollWeek">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
+   <p class="payroll-note" id="payrollPeriod"></p><div id="pay" class="table-scroll"></div>
   </section>
   <section id="owner" class="card settings-card hide">
    <div class="card-header"><div><h2>Настройки точки</h2><p>Изменить рабочие дни, команду и ставки оплаты</p></div><button onclick="toggleSettings()">Закрыть ×</button></div>
@@ -696,11 +703,40 @@ function draw(){
    }).join('')+'</tr>';
  }).join('');
  E('calendar').innerHTML='<table class="weektable">'+header+'<tbody>'+rows+'</tbody></table>';
- if(s.role==='owner'){
-  const paid=s.payments||{};
-  E('pay').innerHTML='<table class="paytable"><thead><tr><th>Сотрудник</th><th>Начислено</th><th>Выплата</th></tr></thead><tbody>'+
-  s.employees.map(n=>{const sum=assigned.filter(x=>x.employee===n).reduce((a,x)=>a+Number(x.pay||0),0);return '<tr><td>'+esc(n)+'</td><td class="sum">'+rub(sum)+'</td><td>'+(paid[from+'|'+n]?'<span class="paidstatus">✓ Выплачено</span>':'<button class="small" onclick="paid(\''+encodeURIComponent(n)+'\')">Отметить выплату</button>')+'</td></tr>'}).join('')+'</tbody></table>';
- }
+ if(s.role==='owner')renderPayroll();
+}
+function payrollData(){
+ if(!s)return {rows:[],all:false};
+ const from=monday(E('week').value||iso(new Date())),all=E('payrollWeek')?.value==='all';
+ const end=add(from,6),shift=Array.isArray(s.schedule)?s.schedule:[];
+ const source=all?shift:shift.filter(x=>x.date>=from&&x.date<=end);
+ const names=[...new Set([...s.employees,...shift.map(x=>x.employee).filter(Boolean)])];
+ const rows=names.map(name=>{
+  const assigned=source.filter(x=>x.employee===name);
+  return {name,shifts:assigned.filter(x=>x.kind==='shift').length,hours:assigned.filter(x=>x.kind==='hour').reduce((sum,x)=>sum+(new Date('1970-01-01T'+x.end+':00')-new Date('1970-01-01T'+x.start+':00'))/3600000,0),gross:Math.round(assigned.reduce((sum,x)=>sum+Number(x.pay||0),0)*100)/100};
+ });
+ return {rows,all,from,end};
+}
+function renderPayroll(){
+ if(!s||s.role!=='owner')return;
+ const {rows,all,from,end}=payrollData(),paid=s.payments||{};
+ const fmt=v=>new Date(v+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+ E('payrollPeriod').textContent=all?'Начисления по всем назначенным сменам. Для отметки выплаты выберите конкретную неделю.':'Период: '+fmt(from)+' — '+fmt(end)+' · данные из графика смен';
+ const total=rows.reduce((a,x)=>a+x.gross,0);
+ E('pay').innerHTML='<table class="paytable payroll-report"><thead><tr><th>Сотрудник</th><th>Смен</th><th>Часов</th><th>Начислено</th><th>Выплата</th></tr></thead><tbody>'+
+ rows.map(x=>{const payment=paid[from+'|'+x.name],encoded=encodeURIComponent(x.name);
+ return '<tr><td>'+esc(x.name)+'</td><td>'+x.shifts+'</td><td>'+Number(x.hours.toFixed(2))+'</td><td class="sum">'+rub(x.gross)+'</td><td>'+(all?'—':payment?'<span class="paidstatus">✓ Выплачено'+(payment.amount!==undefined?' '+rub(payment.amount):'')+'</span>':'<button class="small" onclick="paid(\''+encoded+'\')">Отметить выплату</button>')+'</td></tr>'}).join('')+
+ '<tr class="payroll-total"><td><b>Общий фонд зарплаты</b></td><td colspan="2"></td><td class="sum"><b>'+rub(total)+'</b></td><td></td></tr></tbody></table>';
+}
+function exportPayroll(){
+ if(!s||s.role!=='owner')return;
+ const {rows,all,from}=payrollData();
+ const out=[['Сотрудник','Смены','Почасовая работа, ч','Начислено, руб.','Статус выплаты']];
+ for(const x of rows)out.push([x.name,x.shifts,Number(x.hours.toFixed(2)),x.gross,all?'Сводка':s.payments?.[from+'|'+x.name]?'Выплачено':'Не выплачено']);
+ out.push(['Общий фонд','','',Math.round(rows.reduce((a,x)=>a+x.gross,0)*100)/100,'']);
+ const text='\ufeff'+out.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
+ a.href=url;a.download='По_графику_начисления_'+(all?'весь_период':from)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function mutate(action,p){
  if(!s||mutateBusy)return;
