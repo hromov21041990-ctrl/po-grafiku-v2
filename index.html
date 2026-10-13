@@ -833,7 +833,7 @@ function renderMonthlyPayroll(){
  rows.map(x=>{const n=encodeURIComponent(x.name),a=x.advance;
  const advance=a.at?'<b>✓ Аванс выплачен '+rub(a.amount)+'</b><button class="small" onclick="monthlyAction(&quot;advance_unpaid&quot;,&quot;'+n+'&quot;)">Отменить аванс</button>':'<button class="small" onclick="monthlyAction(&quot;advance_paid&quot;,&quot;'+n+'&quot;)">Отметить аванс</button>';
  const salary=x.salary?'<b>✓ Зарплата выплачена '+rub(x.salary.amount)+'</b><button class="small" onclick="monthlyAction(&quot;salary_unpaid&quot;,&quot;'+n+'&quot;)">Отменить отметку</button>':x.net>0?'<button class="small" onclick="monthlyAction(&quot;salary_paid&quot;,&quot;'+n+'&quot;)">Выплачена зарплата</button>':'—';
- return '<tr><td>'+esc(x.name)+'</td><td>'+rub(x.gross)+'</td><td>'+rub(x.fine)+'</td><td><input type="number" min="0" max="1000000" step=".01" class="fine-input" value="'+Number(a.amount||0)+'" data-employee="'+n+'" aria-label="Аванс '+esc(x.name)+'" '+(a.at?'disabled':'onchange="saveAdvance(this)"')+'>'+advance+'</td><td class="sum">'+rub(x.net)+'</td><td>'+salary+'</td></tr>'}).join('')+
+ return '<tr><td>'+esc(x.name)+'</td><td>'+rub(x.gross)+'</td><td><input type="number" step=".01" min="-1000000" max="1000000" class="fine-input" value="'+x.fine+'" data-employee="'+n+'" aria-label="Штраф или возврат '+esc(x.name)+'" onchange="saveMonthlyFine(this)"></td><td><input type="number" min="0" max="1000000" step=".01" class="fine-input" value="'+Number(a.amount||0)+'" data-employee="'+n+'" aria-label="Аванс '+esc(x.name)+'" '+(a.at?'disabled':'onchange="saveAdvance(this)"')+'>'+advance+'</td><td class="sum">'+rub(x.net)+'</td><td>'+salary+'</td></tr>'}).join('')+
  '<tr class="payroll-total"><td>Общий фонд</td><td>'+rub(rows.reduce((a,x)=>a+x.gross,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.fine,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.advancePaid,0))+'</td><td class="sum">'+rub(rows.reduce((a,x)=>a+x.net,0))+'</td><td></td></tr></tbody></table>';
 }
 async function monthlyAction(op,encoded,amount=null){
@@ -848,6 +848,11 @@ async function monthlyAction(op,encoded,amount=null){
   draw();syncLabel('Сохранено · '+syncClock(),'ok');
  }catch(e){E('status').textContent='Не сохранено: '+e.message;await syncNow(true)}
  finally{mutateBusy=false}
+}
+function saveMonthlyFine(input){
+ const value=Number(input.value);
+ if(!Number.isFinite(value)||Math.abs(value)>1000000||Math.abs(value*100-Math.round(value*100))>.001){alert('Штраф или возврат от −1 000 000 до 1 000 000 ₽');renderMonthlyPayroll();return}
+ monthlyAction('fine',input.dataset.employee,value);
 }
 function saveAdvance(input){
  const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>1000000||Math.abs(value*100-Math.round(value*100))>.001){alert('Введите сумму аванса до 1 000 000 ₽');renderMonthlyPayroll();return}
