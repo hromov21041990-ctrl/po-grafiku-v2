@@ -356,7 +356,49 @@ body.help-open{overflow:hidden}
  .help-bottom{align-items:stretch}
  .help-bottom button{width:100%}
 }.job-rows,.job-mapping{display:grid;gap:9px}.job-entry{display:grid;grid-template-columns:minmax(130px,2fr) repeat(3,minmax(100px,1fr)) 40px;gap:9px;align-items:center}.job-entry button{padding:8px}.job-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.mapping-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(160px,1fr);align-items:center;gap:12px;border-bottom:1px solid #e4ecea;padding:7px 0}.mapping-row span{overflow-wrap:anywhere}.job-shift-tag{display:block;font-size:11px;color:#476f80;font-weight:700}@media(max-width:600px){.job-entry{grid-template-columns:1fr 1fr}.job-entry button{grid-column:1/-1}.job-entry .job-name{grid-column:1/-1}.mapping-row{grid-template-columns:1fr}}
-</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js"></script></head>
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js"></script><style id="assignment-modal-style">
+.assignment-overlay{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;background:rgba(15,45,61,.58);padding:16px}
+.assignment-dialog.work-card{margin:0!important;width:min(670px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;border-radius:22px;box-shadow:0 26px 80px rgba(15,45,61,.26)}
+.assignment-dialog .card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.assignment-dialog .card-header button{flex-shrink:0}
+body.assignment-open{overflow:hidden}
+@media(max-width:767px){
+.assignment-overlay{padding:0;align-items:flex-end}
+.assignment-dialog.work-card{width:100%;max-height:88dvh;margin:0!important;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));overflow-y:auto}
+.assignment-dialog .card-header{display:flex;align-items:flex-start}
+.assignment-dialog .card-header h2{font-size:20px}
+.assignment-dialog .card-header p{font-size:12px;margin-bottom:0}
+.assignment-dialog .card-header button{margin-top:0;min-height:42px;font-size:12px}
+.assignment-dialog .grid-form{grid-template-columns:1fr;gap:10px}
+.assignment-dialog .work-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.assignment-dialog .work-actions button{min-height:45px;padding:10px 7px;font-size:13px}
+}
+</style><style id="mobile-day-cards">
+.mobile-days{display:none}
+@media(max-width:767px){
+#calendar{display:none}
+.mobile-days{display:grid;gap:10px}
+.mobile-day{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}
+.mobile-day[open]{border-color:#A5DDCB}
+.mobile-day.mobile-weekend{border-left:3px solid #ECB7B7}
+.mobile-day.mobile-today{box-shadow:0 0 0 1px #22C998}
+.mobile-day summary{list-style:none;display:flex;align-items:center;gap:8px;padding:14px 12px;min-height:69px;cursor:pointer}
+.mobile-day summary::-webkit-details-marker{display:none}
+.mobile-day-date{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.mobile-day-date strong{font-size:14px;font-weight:800}
+.mobile-day-date small{font-size:11px;color:var(--muted)}
+.mobile-day-count{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.mobile-day-count b{font-size:12px;color:#0B8965}
+.mobile-day-count small{font-size:11px;color:var(--muted)}
+.mobile-chevron{font-size:22px;color:#0B8965;transition:transform .2s}
+.mobile-day[open] .mobile-chevron{transform:rotate(90deg)}
+.mobile-day-content{padding:12px;display:grid;gap:12px;border-top:1px solid var(--line)}
+.mobile-slot>b{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+.mobile-slot .slotbtn{width:100%;min-height:65px;height:auto}
+.mobile-slot .slot{min-height:auto}
+.mobile-no-work{font-size:13px;color:var(--muted);padding:8px}
+}
+</style></head>
 <body>
 <div class="page">
  <header class="topbar" aria-label="По графику">
@@ -454,6 +496,7 @@ body.help-open{overflow:hidden}
    </div>
    <div id="period" class="week-range"></div>
    <div id="calendar" class="calendar" aria-label="Календарь смен"></div>
+<div id="mobileDays" class="mobile-days" aria-label="Смены по дням"></div>
    <div class="table-hint"><span><i class="legenddot"></i>Свободно</span><span><i class="legenddot busy-dot"></i>Назначено</span><span><i class="legenddot off-dot"></i>Выходной</span></div>
    <p id="status" role="status"></p>
   </section>
@@ -464,8 +507,9 @@ body.help-open{overflow:hidden}
    <button class="quick-action" onclick="navTo('paySection')"><span class="quick-icon">₽</span><span><strong>Выплаты</strong><small>Отметить расчёты за неделю</small></span><span class="quick-arrow">›</span></button>
    <button class="quick-action" onclick="openHelp('contact')"><span class="quick-icon">?</span><span><strong>Есть вопрос или ошибка?</strong><small>Написать в поддержку</small></span><span class="quick-arrow">›</span></button><div class="quick-summary"><span>Начисления за неделю</span><strong id="quickOwed">—</strong><span id="quickSlots">Нет назначений</span></div>
   </aside>
-  <section id="assignment" class="card work-card hide">
-   <div class="card-header"><div><h2>Назначить сотрудника</h2><p>Выберите сотрудника, ставку и часы работы</p></div><button onclick="document.getElementById('assignment').classList.add('hide')">Закрыть ×</button></div>
+  <div id="assignmentOverlay" class="assignment-overlay hide" onclick="if(event.target===this)closeAssignment()">
+  <section id="assignment" class="card work-card assignment-dialog" role="dialog" aria-modal="true" aria-labelledby="assignmentTitle" tabindex="-1">
+   <div class="card-header"><div><h2 id="assignmentTitle">Назначить сотрудника</h2><p>Выберите сотрудника, ставку и часы работы</p></div><button type="button" onclick="closeAssignment()" aria-label="Закрыть окно назначения">Закрыть ×</button></div>
    <div class="grid-form">
     <div class="formfield"><label for="date">Дата</label><input id="date" type="date"></div>
     <div class="formfield"><label for="position">Место</label><select id="position"></select></div>
@@ -474,8 +518,9 @@ body.help-open{overflow:hidden}
     <div class="formfield"><label for="start">Начало</label><input id="start" type="time"></div>
     <div class="formfield"><label for="end">Окончание</label><input id="end" type="time"></div>
    </div>
-   <p id="roleRatePreview" class="formnote"></p><div class="work-actions"><button class="primary" onclick="assign()">Сохранить назначение</button><button onclick="document.getElementById('assignment').classList.add('hide')">Отмена</button></div>
+   <p id="roleRatePreview" class="formnote"></p><div class="work-actions"><button class="primary" onclick="assign()">Сохранить назначение</button><button type="button" onclick="closeAssignment()">Отмена</button></div>
   </section>
+ </div>
   <section id="paySection" class="card pay-card hide">
    <div class="card-header"><div><h2>Еженедельные выплаты</h2><p>Начисления по назначенным сменам выбранной недели</p></div></div>
    <div class="payroll-toolbar"><label for="payrollWeek">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
@@ -544,7 +589,7 @@ function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').cla
 async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})});let v=await r.json();if(!r.ok)throw Error(v.error||'Ошибка сервера');return v}
 async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days')},rates:{shift:+E('shift').value,half:+E('half').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
-function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');E('assignment').classList.add('hide');draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
+function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
 function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');renderJobRoles();dayUI('editDays',s.config.days)}
 function syncClock(){return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function syncLabel(message,state='ok'){
@@ -565,7 +610,7 @@ async function syncNow(force=false){
   if(Number(latest.version)>Number(s.version)){
    s=latest;draw();
    syncLabel('Обновлено с другого устройства · '+syncClock(),'ok');
-   if(!E('assignment').classList.contains('hide'))E('status').textContent='График обновился. Проверьте выбранное место перед назначением.';
+   if(!E('assignmentOverlay').classList.contains('hide'))E('status').textContent='График обновился. Проверьте выбранное место перед назначением.';
   }else syncLabel('Синхронизировано · '+syncClock(),'ok');
  }catch(e){
   if(session===token&&s)syncLabel('Не удалось обновить · '+String(e.message||'Проверьте соединение'),'error');
@@ -658,7 +703,36 @@ function showRoleRate(){
  E('roleRatePreview').textContent=r?(s.role==='owner'?'Ставки должности: '+rub(r.shift)+' за смену, '+rub(r.half??r.shift/2)+' за полсмены или '+rub(r.hour)+' за час.':'Должность: '+r.name):((s.jobRoles||[]).length?'Выберите должность.':'Владелец ещё не добавил должности. Для старых точек пока действует общая ставка.');
 }
 
-function chooseShift(date,position){E('assignment').classList.remove('hide');E('date').value=date;E('position').value=String(position);renderRoleSelect();E('assignment').scrollIntoView({behavior:'smooth',block:'nearest'})}
+let lastAssignmentTrigger=null;
+function closeAssignment(){
+ const overlay=E('assignmentOverlay');
+ if(!overlay)return;
+ overlay.classList.add('hide');
+ document.body.classList.remove('assignment-open');
+ if(lastAssignmentTrigger&&lastAssignmentTrigger.isConnected)lastAssignmentTrigger.focus({preventScroll:true});
+ lastAssignmentTrigger=null;
+}
+function chooseShift(date,position){
+ if(!s)return;
+ lastAssignmentTrigger=document.activeElement;
+ E('date').value=date;
+ E('position').value=String(position);
+ renderRoleSelect();
+ E('assignmentOverlay').classList.remove('hide');
+ document.body.classList.add('assignment-open');
+ requestAnimationFrame(()=>E('employee').focus({preventScroll:true}));
+}
+document.addEventListener('keydown',event=>{
+ const overlay=E('assignmentOverlay');
+ if(!overlay||overlay.classList.contains('hide'))return;
+ if(event.key==='Escape'){event.preventDefault();closeAssignment();return}
+ if(event.key!=='Tab')return;
+ const controls=[...E('assignment').querySelectorAll('button,input,select,textarea,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length);
+ if(!controls.length)return;
+ if(event.shiftKey&&document.activeElement===controls[0]){event.preventDefault();controls[controls.length-1].focus()}
+ else if(!event.shiftKey&&document.activeElement===controls[controls.length-1]){event.preventDefault();controls[0].focus()}
+});
+
 function draw(){
  if(!s)return;
  const all=Array.isArray(s.schedule)?s.schedule:[];
@@ -709,6 +783,22 @@ function draw(){
    }).join('')+'</tr>';
  }).join('');
  E('calendar').innerHTML='<table class="weektable">'+header+'<tbody>'+rows+'</tbody></table>';
+ const root=E('mobileDays'),previous=root.dataset.week||'';
+ const opened=new Set(previous===from?[...root.querySelectorAll('details[open]')].map(el=>el.dataset.date):[]);
+ root.dataset.week=from;
+ root.innerHTML=workdays.map(day=>{
+  const d=day.date,dayRows=all.filter(v=>v.date===d),used=dayRows.length,free=Math.max(0,s.config.positions-used);
+  const weekday=['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'][day.dow];
+  const open=previous===from?opened.has(d):d===today;
+  const status=day.open?used+' из '+s.config.positions+' смен занято':'Выходной';
+  const remaining=day.open?(free?free+' свободно':'Все занято'):'Нет смен';
+  const slots=day.open?Array.from({length:s.config.positions},(_,p)=>{
+   const item=dayRows.find(v=>v.position===p);
+   if(!item)return '<div class="mobile-slot"><b>Смена №'+(p+1)+'</b><button type="button" class="slotbtn" onclick="chooseShift(\''+d+'\','+p+')">Свободно<small>＋ Назначить</small></button></div>';
+   return '<div class="mobile-slot"><b>Смена №'+(p+1)+'</b><div class="slot busy"><span class="person">'+esc(item.employee)+'</span>'+(item.jobRoleName?'<small class="job-shift-tag">'+esc(item.jobRoleName)+'</small>':'')+'<div class="shift-time">'+esc(item.start)+'–'+esc(item.end)+(item.kind==='half'?' · полсмены':'')+'</div>'+(s.role==='owner'?'<span class="shift-pay">'+rub(item.pay)+'</span><br><button class="remove-btn" onclick="removeShift(\''+item.id+'\')">Снять запись</button>':'')+'</div></div>';
+  }).join(''):'<div class="mobile-no-work">В этот день точка не работает</div>';
+  return '<details class="mobile-day'+(day.dow>=5?' mobile-weekend':'')+(d===today?' mobile-today':'')+'" data-date="'+d+'"'+(open?' open':'')+'><summary><span class="mobile-day-date"><strong>'+weekday+'</strong><small>'+fmt(d)+'</small></span><span class="mobile-day-count"><b>'+status+'</b><small>'+remaining+'</small></span><span class="mobile-chevron" aria-hidden="true">›</span></summary><div class="mobile-day-content">'+slots+'</div></details>';
+ }).join('');
  if(s.role==='owner')renderPayroll();
 }
 function payrollData(){
@@ -796,7 +886,7 @@ async function mutate(action,p){
   if(Number(r.company.version)>=Number(s.version))s=normalize(r.company);
   draw();syncLabel('Сохранено и синхронизировано · '+syncClock(),'ok');
   E('status').textContent='Сохранено. Остальные устройства увидят изменение автоматически.';
-  if(action==='assign')E('assignment').classList.add('hide');
+  if(action==='assign')closeAssignment();
   if(action==='settings')E('owner').classList.add('hide');
  }catch(e){
   if(session!==token)return;
@@ -811,12 +901,12 @@ async function mutate(action,p){
 async function assign(){if(s.jobRoles.length&&!E('jobRole').value){E('status').textContent='Выберите должность для смены';return}if(E('kind').value==='half'){
   if(mutateBusy)return;
   mutateBusy=true;
-  try{const result=await sb.rpc('pvz2_assign_half',{p_token:token,p_date:E('date').value,p_position:+E('position').value,p_employee_index:+E('employee').value,p_start:E('start').value,p_end:E('end').value,p_role_id:E('jobRole').value,p_expected_version:s.version});if(result.error)throw Error(result.error.message);s={...s,schedule:result.data.schedule,version:Number(result.data.version)};E('assignment').classList.add('hide');draw();syncLabel('Сохранено · '+syncClock(),'ok')}catch(e){E('status').textContent='Не сохранено: '+e.message}finally{mutateBusy=false}return;
+  try{const result=await sb.rpc('pvz2_assign_half',{p_token:token,p_date:E('date').value,p_position:+E('position').value,p_employee_index:+E('employee').value,p_start:E('start').value,p_end:E('end').value,p_role_id:E('jobRole').value,p_expected_version:s.version});if(result.error)throw Error(result.error.message);s={...s,schedule:result.data.schedule,version:Number(result.data.version)};closeAssignment();draw();syncLabel('Сохранено · '+syncClock(),'ok')}catch(e){E('status').textContent='Не сохранено: '+e.message}finally{mutateBusy=false}return;
  }mutate('assign',{date:E('date').value,position:+E('position').value,employeeIndex:+E('employee').value,jobRoleId:E('jobRole').value,kind:E('kind').value,start:E('start').value,end:E('end').value})}
 function removeShift(id){if(confirm('Снять сотрудника со смены?'))mutate('remove',{id})}
 function settings(){if(editVersion!==s.version){E('status').textContent='За время редактирования данные точки изменились. Закройте и снова откройте настройки, чтобы не перезаписать чужие изменения.';E('status').scrollIntoView({behavior:'smooth',block:'nearest'});return}try{const roles=collectJobRoles(),mapping=collectEmployeeRoles();mutate('settings',{name:E('editName').value,employees:list('editNames'),config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays')},rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},jobRoles:roles,employeeRoles:mapping})}catch(e){E('status').textContent=e.message}}
 function paid(n){mutate('paid',{week:monday(E('week').value),employee:decodeURIComponent(n)})}
-function logout(){let old=token;token='';sessionStorage.removeItem('pvz2token');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
+function logout(){closeAssignment();let old=token;token='';sessionStorage.removeItem('pvz2token');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
 function togglePassword(id,btn){const x=E(id),shown=x.type==='password';x.type=shown?'text':'password';btn.textContent=shown?'◌':'◉';btn.setAttribute('aria-label',shown?'Скрыть пароль':'Показать пароль')}
 function showCode(id,code){const box=E(id);box.classList.remove('hide');box.innerHTML='<b>Сохраните новый резервный код:</b><div class="recovery-code">'+esc(code)+'</div><p class="formnote">Код показан только сейчас. Храните его отдельно от пароля — без него восстановить доступ нельзя.</p><button onclick="copyRecovery(\''+code+'\')">Скопировать код</button>'}
 function copyRecovery(code){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(code).then(()=>alert('Код скопирован')).catch(()=>prompt('Скопируйте код',code));else prompt('Скопируйте код',code)}
