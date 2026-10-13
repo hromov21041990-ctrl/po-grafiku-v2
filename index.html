@@ -422,9 +422,9 @@ body.assignment-open{overflow:hidden}
     <div class="benefit"><div class="benefit-icon">⌂</div><div><b>Несколько точек</b><small>У каждой компании собственные данные и настройки</small></div></div>
    </div>
   </div>
-  <section class="card auth-card" aria-label="Вход и регистрация"><div id="emailSignup"><h2>Аккаунт владельца</h2><p class="formnote">Одна почта для всех ваших точек.</p><label for="ownerEmail">Электронная почта</label><input id="ownerEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"><label for="accountPassword">Пароль аккаунта (от 10 символов)</label><div class="pass-wrap"><input id="accountPassword" type="password" autocomplete="new-password"><button type="button" onclick="togglePassword('accountPassword',this)">◉</button></div><button class="primary buttonwide" onclick="signupEmail()">Зарегистрировать владельца</button><p id="emailStatus" class="formnote"></p></div>
-   <div class="auth-tabs"><button id="regTab" class="is-active" onclick="mode(false)">Создать точку</button><button id="signinTab" onclick="mode(true)">Войти</button></div>
-   <div id="reg">
+  <section class="card auth-card" aria-label="Вход и регистрация"><div id="emailSignup" class="hide"><h2>Аккаунт владельца</h2><p class="formnote">Одна почта для всех ваших точек.</p><label for="ownerEmail">Электронная почта</label><input id="ownerEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"><label for="accountPassword">Пароль аккаунта (от 10 символов)</label><div class="pass-wrap"><input id="accountPassword" type="password" autocomplete="new-password"><button type="button" onclick="togglePassword('accountPassword',this)">◉</button></div><button class="primary buttonwide" onclick="signupEmail()">Зарегистрировать владельца</button><p id="emailStatus" class="formnote"></p></div>
+   <div id="authTabs" class="auth-tabs"><button id="regTab" onclick="mode(false)">Регистрация</button><button id="signinTab" class="is-active" onclick="mode(true)">Войти</button></div>
+   <div id="reg" class="hide">
     <h2 class="formtitle">Настройте свою точку</h2><p class="formnote">Достаточно нескольких параметров, чтобы начать пользоваться графиком.</p>
     <div class="grid-form">
      <div class="formfield"><label for="name">Название компании или точки</label><input id="name" placeholder="Например, Магазин на Ленина" autocomplete="organization"></div>
@@ -443,9 +443,9 @@ body.assignment-open{overflow:hidden}
      </div>
     </div>
     <div class="formgroup"><h3>Должности и оплата труда</h3><p class="formnote">Укажите ставки для каждой должности: за смену, полсмены и час.</p><div id="createJobRoles" class="job-rows"></div><button type="button" onclick="addCreateJobRole()">+ Добавить должность</button><div class="formfield wide" style="margin-top:12px"><label>Должность каждого сотрудника</label><div id="createEmployeeRoles" class="job-mapping"></div></div></div>
-    <button class="primary buttonwide" onclick="register()">Создать точку и открыть график →</button><p class="formnote">После регистрации сохраните резервный код для восстановления доступа.</p>
+    <button class="primary buttonwide" onclick="register()">Создать точку и открыть график →</button><button type="button" class="text-link" onclick="loadPoints()">← Вернуться к моим точкам</button><p class="formnote">После регистрации сохраните резервный код для восстановления доступа.</p>
    </div>
-   <div id="signin" class="hide"><div class="formfield wide" id="emailLoginWrap"><label for="emailLogin">Электронная почта владельца</label><input id="emailLogin" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+   <div id="signin"><div class="formfield wide" id="emailLoginWrap"><label for="emailLogin">Электронная почта владельца</label><input id="emailLogin" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
     <h2 class="formtitle">С возвращением!</h2><p class="formnote">Войдите, чтобы управлять сменами и выплатами.</p>
     <div class="grid-form">
      <div class="formfield wide" id="staffCodeWrap"><label for="signinCode">Код вашей точки</label><input id="signinCode" placeholder="my-shop" autocapitalize="none" autocomplete="off" disabled></div>
@@ -1043,7 +1043,7 @@ async function emailCall(action,p={}){const a=await authSession();return api(act
 async function signupEmail(){try{if(!sb)throw Error('Не загрузился модуль авторизации');const {error}=await sb.auth.signUp({email:E('ownerEmail').value.trim().toLowerCase(),password:E('accountPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;E('emailStatus').textContent='Проверьте почту и перейдите по ссылке подтверждения. Затем войдите в аккаунт.'}catch(e){E('emailStatus').textContent=e.message}}
 async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth').classList.add('hide');E('app').classList.add('hide');E('pointPicker').classList.remove('hide');document.body.classList.remove('beta-in-app');E('pointsList').innerHTML=q.points.map(p=>'<button onclick="enterPoint(\''+p.id+'\')">'+esc(p.name)+' · '+esc(p.code)+'</button>').join('')||'<p class="muted">Пока нет точек. Создайте первую.</p>'}catch(e){alert(e.message)}}
 async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){alert(e.message)}}
-function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
+function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('authTabs').classList.add('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
 async function accountLogout(){if(sb)await sb.auth.signOut();token='';s=null;sessionStorage.removeItem('pvz2token');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
 async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
 function authErrorText(e){const code=String(e?.code||''),message=String(e?.message||'Ошибка авторизации');
@@ -1065,7 +1065,7 @@ async function login(){try{
  }catch(e){E('error').textContent=authErrorText(e)}
 }
 function mode(b){if(recoveryMode)return showRecoveryPasswordForm();
- E('emailSignup').classList.toggle('hide',b);E('reg').classList.add('hide');E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent='';
+ E('authTabs').classList.remove('hide');E('emailSignup').classList.toggle('hide',b);E('reg').classList.add('hide');E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent='';
  const staff=E('role').value==='staff';
  E('emailLoginWrap').classList.toggle('hide',staff);E('staffCodeWrap').classList.toggle('hide',!staff);
  E('signinCode').disabled=!staff;E('emailLogin').disabled=staff;
@@ -1181,13 +1181,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!E('helpOverlay').c
 
 E('employee').addEventListener('change',renderRoleSelect);E('kind').addEventListener('change',showRoleRate);
 initAuthRecovery();
-dayUI('days',[0,1,2,3,4,5,6]);namesFill();addCreateJobRole();mode(false);E('role').onchange=()=>mode(true);
+dayUI('days',[0,1,2,3,4,5,6]);namesFill();addCreateJobRole();mode(true);E('role').onchange=()=>mode(true);
 if(sb)sb.auth.getSession().then(({data,error})=>{
  if(recoveryMode)return showRecoveryPasswordForm();
  if(error){E('error').textContent=authErrorText(error);return}
  if(data.session)loadPoints();
 });else if(token)api('load').then(enter).catch(logout);
-
+</script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="location.replace(location.pathname+'?updated='+Date.now())">Обновить</button></div>
 <script>
 const CURRENT_BUILD='2026-10-14-mobile-update-1';
