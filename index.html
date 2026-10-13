@@ -735,7 +735,7 @@ function renderPayroll(){
   const payment=paid[period+'|'+x.name],name=encodeURIComponent(x.name);
   const action=payment?'<span class="paidstatus">✓ Выплачено '+(payment.amount===undefined?'':rub(payment.amount))+'</span><button class="small" onclick="payrollMark(&quot;unmark&quot;,&quot;'+name+'&quot;)">Снять отметку</button>':x.net>0?'<button class="small" onclick="payrollMark(&quot;mark&quot;,&quot;'+name+'&quot;)">Отметить выплату</button>':'—';
   const warning=payment&&payment.amount!==undefined&&Math.abs(Number(payment.amount)-x.net)>.009?'<small class="payroll-warning">Начисление изменилось — проверьте разницу</small>':'';
-  return '<tr><td>'+esc(x.name)+'</td><td>'+x.shifts+' / '+Number(x.hours.toFixed(2))+'</td><td>'+rub(x.gross)+'</td><td><input class="fine-input" type="number" step=".01" min="-1000000" max="1000000" value="'+x.fine+'" data-employee="'+name+'" onchange="payrollFine(this)"></td><td class="sum">'+rub(x.net)+'</td><td>'+action+warning+'</td></tr>';
+  return '<tr data-gross="'+x.gross+'"><td>'+esc(x.name)+'</td><td>'+x.shifts+' / '+Number(x.hours.toFixed(2))+'</td><td>'+rub(x.gross)+'</td><td><input class="fine-input" type="number" step=".01" min="-1000000" max="1000000" value="'+x.fine+'" data-employee="'+name+'" oninput="previewPayrollFine(this)" onchange="payrollFine(this)"></td><td class="sum">'+rub(x.net)+'</td><td>'+action+warning+'</td></tr>';
  }).join('');
  E('pay').innerHTML='<table class="paytable payroll-report"><thead><tr><th>Сотрудник</th><th>Смен / часов</th><th>Начислено</th><th>Штраф / возврат</th><th>К выплате</th><th>Выплата</th></tr></thead><tbody>'+items+'<tr class="payroll-total"><td><b>Общий фонд зарплаты</b></td><td></td><td>'+rub(total)+'</td><td>'+rub(fineTotal)+'</td><td class="sum"><b>'+rub(total-fineTotal)+'</b></td><td></td></tr></tbody></table>';
 }
@@ -759,6 +759,21 @@ async function payrollAction(operation,name,amount){
   renderPayroll();syncLabel('Сохранено · '+syncClock(),'ok');
  }catch(e){E('status').textContent='Ошибка сохранения: '+e.message}
  finally{mutateBusy=false}
+}
+function previewPayrollFine(input){
+ const tr=input.closest('tr'),val=Number(input.value);
+ if(!tr||!Number.isFinite(val))return;
+ const gross=Number(tr.dataset.gross||0),net=Math.round((gross-val)*100)/100;
+ const cells=tr.querySelectorAll('td');
+ if(cells[4])cells[4].textContent=rub(net);
+ const base=payrollData().rows,week=E('payrollWeek').value==='all'?'all':monday(E('week').value);
+ let total=0,fineTotal=0;
+ E('pay').querySelectorAll('tbody tr[data-gross]').forEach(row=>{
+  const fine=Number(row.querySelector('.fine-input')?.value||0);
+  total+=Number(row.dataset.gross||0);fineTotal+=fine;
+ });
+ const summary=E('pay').querySelector('.payroll-total');
+ if(summary){const tds=summary.querySelectorAll('td');if(tds[3])tds[3].textContent=rub(fineTotal);if(tds[4])tds[4].textContent=rub(total-fineTotal)}
 }
 function payrollFine(input){
  const amount=Number(input.value),name=decodeURIComponent(input.dataset.employee);
