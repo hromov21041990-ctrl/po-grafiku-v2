@@ -438,14 +438,11 @@ body.assignment-open{overflow:hidden}
       <div class="formfield"><label for="positions">Мест в смене</label><input id="positions" type="number" min="1" max="10" value="2"></div>
       <div class="formfield"><label for="opens">Начало работы</label><input id="opens" type="time" value="10:00"></div>
       <div class="formfield"><label for="closes">Окончание работы</label><input id="closes" type="time" value="22:00"></div>
-      <div class="formfield wide"><label for="names">Сотрудники — каждое имя с новой строки</label><textarea id="names" rows="4"></textarea></div>
+      <div class="formfield wide"><label for="names">Сотрудники — каждое имя с новой строки</label><textarea id="names" rows="4" oninput="renderCreateEmployeeRoles()"></textarea></div>
       <div class="formfield"><label for="createPayMode">Период расчёта зарплаты</label><select id="createPayMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно (аванс + зарплата)</option></select></div><div class="formfield wide"><label>Рабочие дни</label><div id="days" class="day-checks"></div></div>
      </div>
     </div>
-    <div class="formgroup"><h3>Оплата труда</h3><div class="grid-form">
-     <div class="formfield"><label for="shift">Ставка за смену, ₽</label><input id="shift" type="number" min="1" value="3000"></div>
-     <div class="formfield"><label for="half">Ставка за полсмены, ₽</label><input id="half" type="number" min="1" step="0.01" value="1500"></div><div class="formfield"><label for="hour">Ставка за час, ₽</label><input id="hour" type="number" min="1" value="200"></div>
-    </div></div>
+    <div class="formgroup"><h3>Должности и оплата труда</h3><p class="formnote">Укажите ставки для каждой должности: за смену, полсмены и час.</p><div id="createJobRoles" class="job-rows"></div><button type="button" onclick="addCreateJobRole()">+ Добавить должность</button><div class="formfield wide" style="margin-top:12px"><label>Должность каждого сотрудника</label><div id="createEmployeeRoles" class="job-mapping"></div></div></div>
     <button class="primary buttonwide" onclick="register()">Создать точку и открыть график →</button><p class="formnote">После регистрации сохраните резервный код для восстановления доступа.</p>
    </div>
    <div id="signin" class="hide"><div class="formfield wide" id="emailLoginWrap"><label for="emailLogin">Электронная почта владельца</label><input id="emailLogin" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
@@ -593,9 +590,9 @@ body.assignment-open{overflow:hidden}
 const API='https://vyavhynnybsinkiievbu.supabase.co/functions/v1/pvz-v2',KEY='sb_publishable_eIWwXJEBGxYAbnhOc-MKfw_NitfQtB_',E=id=>document.getElementById(id);let token=sessionStorage.getItem('pvz2token')||'',s=null;let syncBusy=false,mutateBusy=false,lastSyncAttempt=0,editVersion=null;
 const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),add=(v,n)=>{let d=new Date(v+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)},monday=v=>add(v,-(new Date(v+'T12:00:00').getDay()+6)%7),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),rub=n=>Number(n).toLocaleString('ru-RU')+' ₽';
 const days=id=>[...E(id).querySelectorAll('input:checked')].map(x=>+x.value),dayUI=(id,checked)=>E(id).innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((x,i)=>'<label style="display:inline-block"><input type="checkbox" value="'+i+'" '+(checked.includes(i)?'checked':'')+'>'+x+'</label> ').join(''),list=id=>E(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
-function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').classList.add('hide');E('reg').classList.toggle('hide',b);E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent=''}function namesFill(){let old=list('names'),n=Math.min(50,Math.max(1,+E('count').value||1));E('names').value=Array.from({length:n},(_,i)=>old[i]||'Сотрудник '+(i+1)).join('\n')}
+function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').classList.add('hide');E('reg').classList.toggle('hide',b);E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent=''}function namesFill(){let old=list('names'),n=Math.min(50,Math.max(1,+E('count').value||1));E('names').value=Array.from({length:n},(_,i)=>old[i]||'Сотрудник '+(i+1)).join('\n');renderCreateEmployeeRoles()}
 async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})});let v=await r.json();if(!r.ok)throw Error(v.error||'Ошибка сервера');return v}
-async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},rates:{shift:+E('shift').value,half:+E('half').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
+async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
 function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
 function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
@@ -646,6 +643,32 @@ function navTo(id){
 }
 function mobileJump(id){if(id==='owner'&&E('owner').classList.contains('hide'))toggleSettings();else if(E(id)&&!E(id).classList.contains('hide'))E(id).scrollIntoView({behavior:'smooth',block:'start'})}
 
+function addCreateJobRole(){
+ const root=E('createJobRoles'),row=document.createElement('div');
+ row.className='job-entry';row.dataset.id='role-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+ row.innerHTML='<input class="job-name" maxlength="80" placeholder="Должность" aria-label="Название должности">'+
+ '<input class="job-shift" type="number" min="1" step=".01" placeholder="₽ / смена" aria-label="Ставка за смену">'+
+ '<input class="job-half" type="number" min="1" step=".01" placeholder="₽ / полсмены" aria-label="Ставка за полсмены">'+
+ '<input class="job-hour" type="number" min="1" step=".01" placeholder="₽ / час" aria-label="Ставка за час">'+
+ '<button type="button" aria-label="Удалить должность">×</button>';
+ row.querySelector('button').onclick=()=>{row.remove();renderCreateEmployeeRoles()};
+ row.querySelectorAll('input').forEach(el=>el.addEventListener('input',renderCreateEmployeeRoles));
+ root.appendChild(row);renderCreateEmployeeRoles();
+}
+function renderCreateEmployeeRoles(){
+ const container=E('createEmployeeRoles');if(!container)return;
+ const previous=Object.fromEntries([...container.querySelectorAll('select')].map(x=>[x.dataset.name,x.value]));
+ const roles=[...E('createJobRoles').querySelectorAll('.job-entry')].map(x=>({id:x.dataset.id,name:x.querySelector('.job-name').value.trim()})).filter(x=>x.name);
+ container.innerHTML=list('names').map(name=>'<div class="mapping-row"><span>'+esc(name)+'</span><select data-name="'+esc(name)+'"><option value="">Выберите должность</option>'+roles.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('')+'</select></div>').join('');
+ container.querySelectorAll('select').forEach(x=>{if(previous[x.dataset.name]&&[...x.options].some(o=>o.value===previous[x.dataset.name]))x.value=previous[x.dataset.name]});
+}
+function createRolePayload(){
+ const roles=[...E('createJobRoles').querySelectorAll('.job-entry')].map(x=>({id:x.dataset.id,name:x.querySelector('.job-name').value.trim(),shift:Number(x.querySelector('.job-shift').value),half:Number(x.querySelector('.job-half').value),hour:Number(x.querySelector('.job-hour').value)}));
+ if(!roles.length||roles.some(x=>x.name.length<2||!['shift','half','hour'].every(k=>Number.isFinite(x[k])&&x[k]>0&&x[k]<=1000000)))throw Error('Добавьте должность и заполните три ставки.');
+ const mapping=Object.fromEntries([...E('createEmployeeRoles').querySelectorAll('select')].filter(x=>x.value).map(x=>[x.dataset.name,x.value]));
+ if(Object.keys(mapping).length!==list('names').length)throw Error('Выберите должность каждому сотруднику.');
+ return {jobRoles:roles,employeeRoles:mapping,rates:{shift:roles[0].shift,half:roles[0].half,hour:roles[0].hour}};
+}
 function roleListFromForm(){
  return [...E('editJobRoles').querySelectorAll('.job-entry')].map(el=>({id:el.dataset.id,name:el.querySelector('.job-name').value.trim(),shift:Number(el.querySelector('.job-shift').value),half:Number(el.querySelector('.job-half').value),hour:Number(el.querySelector('.job-hour').value)}));
 }
@@ -1013,7 +1036,7 @@ async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth')
 async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){alert(e.message)}}
 function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
 async function accountLogout(){if(sb)await sb.auth.signOut();token='';s=null;sessionStorage.removeItem('pvz2token');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
-async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},rates:{shift:+E('shift').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
+async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
 function authErrorText(e){const code=String(e?.code||''),message=String(e?.message||'Ошибка авторизации');
  if(code==='invalid_credentials'||/Invalid login credentials/i.test(message))return 'Неверный email или пароль. Проверьте сохранённый пароль в «Паролях» телефона или восстановите доступ по email.';
  if(code==='email_not_confirmed'||/Email not confirmed/i.test(message))return 'Сначала подтвердите email по ссылке из письма.';
@@ -1149,7 +1172,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!E('helpOverlay').c
 
 E('employee').addEventListener('change',renderRoleSelect);E('kind').addEventListener('change',showRoleRate);
 initAuthRecovery();
-dayUI('days',[0,1,2,3,4,5,6]);namesFill();mode(false);E('role').onchange=()=>mode(true);
+dayUI('days',[0,1,2,3,4,5,6]);namesFill();addCreateJobRole();mode(false);E('role').onchange=()=>mode(true);
 if(sb)sb.auth.getSession().then(({data,error})=>{
  if(recoveryMode)return showRecoveryPasswordForm();
  if(error){E('error').textContent=authErrorText(error);return}
