@@ -537,8 +537,7 @@ body.assignment-open{overflow:hidden}
     <div class="formfield"><label for="editPositions">Мест в смене</label><input id="editPositions" type="number" min="1" max="10"></div>
     <div class="formfield"><label for="editOpens">Начало работы</label><input id="editOpens" type="time"></div>
     <div class="formfield"><label for="editCloses">Окончание работы</label><input id="editCloses" type="time"></div>
-    <div class="formfield"><label for="editShift">Ставка за смену, ₽</label><input id="editShift" type="number" min="1"></div>
-    <div class="formfield"><label for="editHalf">Ставка за полсмены, ₽</label><input id="editHalf" type="number" min="1" step="0.01"></div><div class="formfield"><label for="editHour">Ставка за час, ₽</label><input id="editHour" type="number" min="1"></div>
+
     <div class="formfield"><label for="payMode">Период расчёта зарплаты</label><select id="payMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно — аванс и зарплата</option></select></div>
     <div class="formfield wide"><label>Рабочие дни</label><div id="editDays" class="day-checks"></div></div>
     <div class="formfield wide"><label for="editNames">Сотрудники (каждое имя с новой строки)</label><textarea id="editNames" rows="4" oninput="renderEmployeeRoleMapping()"></textarea></div>
@@ -595,7 +594,7 @@ async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'C
 async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
 function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
-function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
+function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
 function syncClock(){return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function syncLabel(message,state='ok'){
  E('syncState').textContent=message;
@@ -1013,7 +1012,7 @@ function settings(){
   if(!['weekly','monthly'].includes(payrollMode))throw Error('Выберите период выплаты');
   mutate('settings',{name:E('editName').value,employees:list('editNames'),
     config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays'),payrollMode},
-    rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},
+    rates:s.rates,
     jobRoles:roles,employeeRoles:mapping});
  }catch(e){E('status').textContent=e.message}
 }
