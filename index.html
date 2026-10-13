@@ -522,7 +522,7 @@ body.assignment-open{overflow:hidden}
   </section>
  </div>
   <section id="paySection" class="card pay-card hide">
-   <div class="card-header"><div><h2>Еженедельные выплаты</h2><p>Начисления по назначенным сменам выбранной недели</p></div></div>
+   <div class="card-header"><div><h2 id="payrollTitle">Еженедельные выплаты</h2><p id="payrollSubtitle">Начисления по назначенным сменам выбранной недели</p></div></div>
    <div class="payroll-toolbar"><label for="payrollMonth" id="payrollMonthBox" class="hide">Месяц расчёта <input id="payrollMonth" type="month" onchange="renderPayroll()"></label><label for="payrollWeek" id="payrollWeekBox">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
    <p class="payroll-note" id="payrollPeriod"></p><div id="pay" class="table-scroll"></div>
   </section>
@@ -866,7 +866,7 @@ function exportMonthlyPayroll(){
 }
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
- const monthly=s.config.payrollMode==='monthly';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
+ const monthly=s.config.payrollMode==='monthly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
  const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
  E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
  const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
@@ -954,7 +954,17 @@ async function assign(){if(s.jobRoles.length&&!E('jobRole').value){E('status').t
   try{const result=await sb.rpc('pvz2_assign_half',{p_token:token,p_date:E('date').value,p_position:+E('position').value,p_employee_index:+E('employee').value,p_start:E('start').value,p_end:E('end').value,p_role_id:E('jobRole').value,p_expected_version:s.version});if(result.error)throw Error(result.error.message);s={...s,schedule:result.data.schedule,version:Number(result.data.version)};closeAssignment();draw();syncLabel('Сохранено · '+syncClock(),'ok')}catch(e){E('status').textContent='Не сохранено: '+e.message}finally{mutateBusy=false}return;
  }mutate('assign',{date:E('date').value,position:+E('position').value,employeeIndex:+E('employee').value,jobRoleId:E('jobRole').value,kind:E('kind').value,start:E('start').value,end:E('end').value})}
 function removeShift(id){if(confirm('Снять сотрудника со смены?'))mutate('remove',{id})}
-async function settings(){if(editVersion!==s.version){E('status').textContent='За время редактирования данные точки изменились. Закройте и снова откройте настройки, чтобы не перезаписать чужие изменения.';E('status').scrollIntoView({behavior:'smooth',block:'nearest'});return}try{if(E('payMode').value!==(s.config.payrollMode||'weekly')){const o=await sb.rpc('pvz2_monthly_payroll',{p_token:token,p_op:'mode',p_period:E('payMode').value,p_employee:'',p_amount:null,p_version:s.version});if(o.error)throw Error(o.error.message);s={...s,config:o.data.config,version:Number(o.data.version)};editVersion=s.version}const roles=collectJobRoles(),mapping=collectEmployeeRoles();mutate('settings',{name:E('editName').value,employees:list('editNames'),config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays')},rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},jobRoles:roles,employeeRoles:mapping})}catch(e){E('status').textContent=e.message}}
+function settings(){
+ if(editVersion!==s.version){E('status').textContent='Данные точки изменились. Закройте настройки и откройте снова.';return}
+ try{
+  const roles=collectJobRoles(),mapping=collectEmployeeRoles(),payrollMode=E('payMode').value;
+  if(!['weekly','monthly'].includes(payrollMode))throw Error('Выберите период выплаты');
+  mutate('settings',{name:E('editName').value,employees:list('editNames'),
+    config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays'),payrollMode},
+    rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},
+    jobRoles:roles,employeeRoles:mapping});
+ }catch(e){E('status').textContent=e.message}
+}
 function paid(n){mutate('paid',{week:monday(E('week').value),employee:decodeURIComponent(n)})}
 function logout(){closeAssignment();let old=token;token='';sessionStorage.removeItem('pvz2token');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
 function togglePassword(id,btn){const x=E(id),shown=x.type==='password';x.type=shown?'text':'password';btn.textContent=shown?'◌':'◉';btn.setAttribute('aria-label',shown?'Скрыть пароль':'Показать пароль')}
