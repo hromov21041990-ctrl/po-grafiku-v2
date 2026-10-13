@@ -404,7 +404,7 @@ body.assignment-open{overflow:hidden}
 .payroll-mode-row select{min-width:235px;min-height:44px;font-size:14px;background:#fff;border-color:#C4E2D5}
 .payroll-mode-row small{font-size:11px;color:#59766B}
 @media(max-width:767px){.payroll-mode-row{display:grid;grid-template-columns:1fr;gap:7px}.payroll-mode-row select{width:100%;min-width:0;font-size:16px}}
-</style></head>
+</style><style id="update-notice-style">#updateNotice{position:fixed;z-index:190;left:12px;right:12px;bottom:calc(82px + env(safe-area-inset-bottom));max-width:460px;margin:auto;background:#0F2D3D;color:white;padding:14px 16px;border-radius:14px;box-shadow:0 10px 35px #0004;display:flex;align-items:center;gap:12px}#updateNotice[hidden]{display:none}#updateNotice span{flex:1;font-size:13px;line-height:1.45}#updateNotice button{background:#22C998;color:#06382B;border:0;padding:10px 12px;border-radius:9px;font-weight:800;cursor:pointer}</style></head>
 <body>
 <div class="page">
  <header class="topbar" aria-label="По графику">
@@ -1177,4 +1177,20 @@ if(sb)sb.auth.getSession().then(({data,error})=>{
  if(error){E('error').textContent=authErrorText(error);return}
  if(data.session)loadPoints();
 });else if(token)api('load').then(enter).catch(logout);
+
+<div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="location.replace(location.pathname+'?updated='+Date.now())">Обновить</button></div>
+<script>
+const CURRENT_BUILD='2026-10-14-mobile-update-1';
+let lastUpdateCheck=0;
+async function checkAppUpdate(){
+ if(Date.now()-lastUpdateCheck<30000)return;lastUpdateCheck=Date.now();
+ try{
+  const response=await fetch('./app-version.json?check='+Date.now(),{cache:'no-store'});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(data.build&&data.build!==CURRENT_BUILD)document.getElementById('updateNotice').hidden=false;
+ }catch(e){}
+}
+window.addEventListener('pageshow',()=>checkAppUpdate());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkAppUpdate()});
 </script></body></html>
