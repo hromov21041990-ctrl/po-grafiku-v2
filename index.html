@@ -398,6 +398,12 @@ body.assignment-open{overflow:hidden}
 .mobile-slot .slot{min-height:auto}
 .mobile-no-work{font-size:13px;color:var(--muted);padding:8px}
 }
+</style><style id="payroll-mode-quick-style">
+.payroll-mode-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:13px 15px;margin:4px 0 10px;border:1px solid #D2EBE0;border-radius:12px;background:#F1FAF6}
+.payroll-mode-row label{font-weight:800;color:#0F2D3D;font-size:13px}
+.payroll-mode-row select{min-width:235px;min-height:44px;font-size:14px;background:#fff;border-color:#C4E2D5}
+.payroll-mode-row small{font-size:11px;color:#59766B}
+@media(max-width:767px){.payroll-mode-row{display:grid;grid-template-columns:1fr;gap:7px}.payroll-mode-row select{width:100%;min-width:0;font-size:16px}}
 </style></head>
 <body>
 <div class="page">
@@ -433,7 +439,7 @@ body.assignment-open{overflow:hidden}
       <div class="formfield"><label for="opens">Начало работы</label><input id="opens" type="time" value="10:00"></div>
       <div class="formfield"><label for="closes">Окончание работы</label><input id="closes" type="time" value="22:00"></div>
       <div class="formfield wide"><label for="names">Сотрудники — каждое имя с новой строки</label><textarea id="names" rows="4"></textarea></div>
-      <div class="formfield"><label for="payMode">Период расчёта зарплаты</label><select id="payMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно (аванс + зарплата)</option></select></div><div class="formfield wide"><label>Рабочие дни</label><div id="days" class="day-checks"></div></div>
+      <div class="formfield"><label for="createPayMode">Период расчёта зарплаты</label><select id="createPayMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно (аванс + зарплата)</option></select></div><div class="formfield wide"><label>Рабочие дни</label><div id="days" class="day-checks"></div></div>
      </div>
     </div>
     <div class="formgroup"><h3>Оплата труда</h3><div class="grid-form">
@@ -523,6 +529,7 @@ body.assignment-open{overflow:hidden}
  </div>
   <section id="paySection" class="card pay-card hide">
    <div class="card-header"><div><h2 id="payrollTitle">Еженедельные выплаты</h2><p id="payrollSubtitle">Начисления по назначенным сменам выбранной недели</p></div></div>
+   <div class="payroll-mode-row"><label for="payrollModeQuick">Система выплат</label><select id="payrollModeQuick" onchange="changePayrollMode(this)"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно — аванс и зарплата</option></select><small>Выбор сохраняется отдельно для этой точки.</small></div>
    <div class="payroll-toolbar"><label for="payrollMonth" id="payrollMonthBox" class="hide">Месяц расчёта <input id="payrollMonth" type="month" onchange="renderPayroll()"></label><label for="payrollWeek" id="payrollWeekBox">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
    <p class="payroll-note" id="payrollPeriod"></p><div id="pay" class="table-scroll"></div>
   </section>
@@ -535,6 +542,7 @@ body.assignment-open{overflow:hidden}
     <div class="formfield"><label for="editCloses">Окончание работы</label><input id="editCloses" type="time"></div>
     <div class="formfield"><label for="editShift">Ставка за смену, ₽</label><input id="editShift" type="number" min="1"></div>
     <div class="formfield"><label for="editHalf">Ставка за полсмены, ₽</label><input id="editHalf" type="number" min="1" step="0.01"></div><div class="formfield"><label for="editHour">Ставка за час, ₽</label><input id="editHour" type="number" min="1"></div>
+    <div class="formfield"><label for="payMode">Период расчёта зарплаты</label><select id="payMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно — аванс и зарплата</option></select></div>
     <div class="formfield wide"><label>Рабочие дни</label><div id="editDays" class="day-checks"></div></div>
     <div class="formfield wide"><label for="editNames">Сотрудники (каждое имя с новой строки)</label><textarea id="editNames" rows="4" oninput="renderEmployeeRoleMapping()"></textarea></div>
 <div class="formfield wide"><div class="job-head"><label for="editJobRoles">Должности и ставки</label><button type="button" onclick="addJobRoleRow()">+ Добавить должность</button></div><p class="formnote">Должности не заданы заранее. Укажите название, ставки за смену, полсмены и час. Можно назначить каждому сотруднику должность по умолчанию.</p><div id="editJobRoles" class="job-rows"></div></div>
@@ -587,7 +595,7 @@ const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.ge
 const days=id=>[...E(id).querySelectorAll('input:checked')].map(x=>+x.value),dayUI=(id,checked)=>E(id).innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((x,i)=>'<label style="display:inline-block"><input type="checkbox" value="'+i+'" '+(checked.includes(i)?'checked':'')+'>'+x+'</label> ').join(''),list=id=>E(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
 function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').classList.add('hide');E('reg').classList.toggle('hide',b);E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent=''}function namesFill(){let old=list('names'),n=Math.min(50,Math.max(1,+E('count').value||1));E('names').value=Array.from({length:n},(_,i)=>old[i]||'Сотрудник '+(i+1)).join('\n')}
 async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})});let v=await r.json();if(!r.ok)throw Error(v.error||'Ошибка сервера');return v}
-async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days')},rates:{shift:+E('shift').value,half:+E('half').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
+async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},rates:{shift:+E('shift').value,half:+E('half').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
 function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
 function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
@@ -816,6 +824,27 @@ function payrollData(){
  });
  return {rows,all,from,end};
 }
+async function changePayrollMode(select){
+ if(!s||s.role!=='owner')return;
+ const previous=s.config.payrollMode||'weekly',mode=select.value;
+ if(mode===previous)return;
+ if(mutateBusy){select.value=previous;return}
+ mutateBusy=true;select.disabled=true;
+ try{
+  const result=await sb.rpc('pvz2_monthly_payroll',{p_token:token,p_op:'mode',p_period:mode,p_employee:'',p_amount:null,p_version:s.version});
+  if(result.error)throw Error(result.error.message||'Не удалось сохранить режим');
+  s={...s,config:result.data.config,version:Number(result.data.version)};
+  E('payMode').value=mode;
+  draw();
+  syncLabel('Режим выплат сохранён · '+syncClock(),'ok');
+  E('status').textContent='Система выплат изменена на '+(mode==='monthly'?'ежемесячную (аванс + зарплата)':'еженедельную');
+ }catch(e){
+  select.value=previous;
+  E('status').textContent='Не удалось изменить режим выплат: '+String(e.message||e);
+  E('payrollPeriod').textContent=E('status').textContent;
+  syncLabel('Ошибка сохранения','error');
+ }finally{mutateBusy=false;select.disabled=false}
+}
 function monthlyRows(){
  const month=E('payrollMonth').value||iso(new Date()).slice(0,7),paid=s.payments||{},adv=paid.__advances||{},fines=paid.__fines||{},schedule=s.schedule||[];
  const names=[...new Set([...s.employees,...schedule.map(x=>x.employee).filter(Boolean)])];
@@ -866,7 +895,7 @@ function exportMonthlyPayroll(){
 }
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
- const monthly=s.config.payrollMode==='monthly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
+ const monthly=s.config.payrollMode==='monthly';E('payrollModeQuick').value=monthly?'monthly':'weekly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
  const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
  E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
  const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
@@ -984,7 +1013,7 @@ async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth')
 async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){alert(e.message)}}
 function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
 async function accountLogout(){if(sb)await sb.auth.signOut();token='';s=null;sessionStorage.removeItem('pvz2token');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
-async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days')},rates:{shift:+E('shift').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
+async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},rates:{shift:+E('shift').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
 function authErrorText(e){const code=String(e?.code||''),message=String(e?.message||'Ошибка авторизации');
  if(code==='invalid_credentials'||/Invalid login credentials/i.test(message))return 'Неверный email или пароль. Проверьте сохранённый пароль в «Паролях» телефона или восстановите доступ по email.';
  if(code==='email_not_confirmed'||/Email not confirmed/i.test(message))return 'Сначала подтвердите email по ссылке из письма.';
