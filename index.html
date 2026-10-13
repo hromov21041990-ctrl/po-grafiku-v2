@@ -132,6 +132,9 @@ h3{font-size:17px}
 .payroll-note{font-size:12px;color:#687d88;margin:3px 0 13px}
 .payroll-total{background:#E6F9F3}
 @media(max-width:767px){.payroll-toolbar{align-items:stretch;flex-direction:column}.payroll-toolbar select,.payroll-toolbar button{width:100%}.payroll-report{display:block;min-width:0}.payroll-report thead{display:none}.payroll-report tbody{display:grid;gap:11px}.payroll-report tr{display:grid;grid-template-columns:1fr 1fr;padding:13px;border:1px solid #dce6e8;border-radius:15px;background:#fff}.payroll-report td{border:0!important;padding:5px!important;font-size:13px}.payroll-report td:first-child{grid-column:1/-1;font-size:16px;font-weight:800}.payroll-report td:nth-child(2):before{content:"Смен: ";color:#73858d}.payroll-report td:nth-child(3):before{content:"Часов: ";color:#73858d}.payroll-report td:nth-child(4):before{content:"Начислено: ";color:#73858d}.payroll-report td:nth-child(4){grid-column:1/-1;font-weight:750}.payroll-report td:nth-child(5){grid-column:1/-1}.payroll-report td:nth-child(5) button{width:100%;min-height:42px}.payroll-report .payroll-total{background:#E6F9F3}}
+.payroll-report .fine-input{width:130px;max-width:100%;min-height:40px;padding:7px 9px;border-radius:9px;font-size:16px}
+.payroll-report .paidstatus{display:block;margin-bottom:6px}.payroll-warning{display:block;color:#b36828;font-size:11px;margin-top:5px}
+@media(max-width:767px){.payroll-report td:nth-child(2):before{content:"Смен / часов: "}.payroll-report td:nth-child(3):before{content:"Начислено: "}.payroll-report td:nth-child(4):before{content:"Штраф / возврат: "}.payroll-report td:nth-child(5):before{content:"К выплате: "}.payroll-report td:nth-child(6){grid-column:1/-1}.payroll-report td:nth-child(6) button{width:100%;min-height:42px}.payroll-report .fine-input{width:100%}}
 </style><link rel="stylesheet" href="./mobile.css"><style id="brand-theme">
 /* По графику — фирменный интерфейс, поверх базовых и мобильных стилей */
 :root{--bg:#F3F5F7;--surface:#fff;--ink:#0F2D3D;--muted:#637684;--line:#E5EAF0;--brand:#22C998;--brand-dark:#0DAE80;--brand-soft:#E6F9F3;--good:#059E74;--good-bg:#EAFCF5;--danger:#C65656;--shadow:0 9px 28px rgba(15,45,61,.065)}
@@ -711,32 +714,59 @@ function payrollData(){
  const end=add(from,6),shift=Array.isArray(s.schedule)?s.schedule:[];
  const source=all?shift:shift.filter(x=>x.date>=from&&x.date<=end);
  const names=[...new Set([...s.employees,...shift.map(x=>x.employee).filter(Boolean)])];
+ const fines=s.payments?.__fines||{};
  const rows=names.map(name=>{
   const assigned=source.filter(x=>x.employee===name);
-  return {name,shifts:assigned.filter(x=>x.kind==='shift').length,hours:assigned.filter(x=>x.kind==='hour').reduce((sum,x)=>sum+(new Date('1970-01-01T'+x.end+':00')-new Date('1970-01-01T'+x.start+':00'))/3600000,0),gross:Math.round(assigned.reduce((sum,x)=>sum+Number(x.pay||0),0)*100)/100};
+  const gross=Math.round(assigned.reduce((sum,x)=>sum+Number(x.pay||0),0)*100)/100;
+  const fine=all?Object.entries(fines).reduce((sum,[k,v])=>sum+(k.endsWith('|'+name)?Number(v||0):0),0):Number(fines[from+'|'+name]||0);
+  return {name,gross,fine,net:Math.round((gross-fine)*100)/100,shifts:assigned.filter(x=>x.kind==='shift').length,hours:assigned.filter(x=>x.kind==='hour').reduce((sum,x)=>sum+(new Date('1970-01-01T'+x.end+':00')-new Date('1970-01-01T'+x.start+':00'))/3600000,0),};
  });
  return {rows,all,from,end};
 }
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
- const {rows,all,from,end}=payrollData(),paid=s.payments||{};
- const fmt=v=>new Date(v+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
- E('payrollPeriod').textContent=all?'Начисления по всем назначенным сменам. Для отметки выплаты выберите конкретную неделю.':'Период: '+fmt(from)+' — '+fmt(end)+' · данные из графика смен';
- const total=rows.reduce((a,x)=>a+x.gross,0);
- E('pay').innerHTML='<table class="paytable payroll-report"><thead><tr><th>Сотрудник</th><th>Смен</th><th>Часов</th><th>Начислено</th><th>Выплата</th></tr></thead><tbody>'+
- rows.map(x=>{const payment=paid[from+'|'+x.name],encoded=encodeURIComponent(x.name);
- return '<tr><td>'+esc(x.name)+'</td><td>'+x.shifts+'</td><td>'+Number(x.hours.toFixed(2))+'</td><td class="sum">'+rub(x.gross)+'</td><td>'+(all?'—':payment?'<span class="paidstatus">✓ Выплачено'+(payment.amount!==undefined?' '+rub(payment.amount):'')+'</span>':'<button class="small" onclick="paid(\''+encoded+'\')">Отметить выплату</button>')+'</td></tr>'}).join('')+
- '<tr class="payroll-total"><td><b>Общий фонд зарплаты</b></td><td colspan="2"></td><td class="sum"><b>'+rub(total)+'</b></td><td></td></tr></tbody></table>';
+ const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
+ E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
+ const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
+ const items=rows.map(x=>{
+  const payment=paid[period+'|'+x.name],name=encodeURIComponent(x.name);
+  const action=payment?'<span class="paidstatus">✓ Выплачено '+(payment.amount===undefined?'':rub(payment.amount))+'</span><button class="small" onclick="payrollMark(&quot;unmark&quot;,&quot;'+name+'&quot;)">Снять отметку</button>':x.net>0?'<button class="small" onclick="payrollMark(&quot;mark&quot;,&quot;'+name+'&quot;)">Отметить выплату</button>':'—';
+  const warning=payment&&payment.amount!==undefined&&Math.abs(Number(payment.amount)-x.net)>.009?'<small class="payroll-warning">Начисление изменилось — проверьте разницу</small>':'';
+  return '<tr><td>'+esc(x.name)+'</td><td>'+x.shifts+' / '+Number(x.hours.toFixed(2))+'</td><td>'+rub(x.gross)+'</td><td><input class="fine-input" type="number" step=".01" min="-1000000" max="1000000" value="'+x.fine+'" data-employee="'+name+'" onchange="payrollFine(this)"></td><td class="sum">'+rub(x.net)+'</td><td>'+action+warning+'</td></tr>';
+ }).join('');
+ E('pay').innerHTML='<table class="paytable payroll-report"><thead><tr><th>Сотрудник</th><th>Смен / часов</th><th>Начислено</th><th>Штраф / возврат</th><th>К выплате</th><th>Выплата</th></tr></thead><tbody>'+items+'<tr class="payroll-total"><td><b>Общий фонд зарплаты</b></td><td></td><td>'+rub(total)+'</td><td>'+rub(fineTotal)+'</td><td class="sum"><b>'+rub(total-fineTotal)+'</b></td><td></td></tr></tbody></table>';
 }
 function exportPayroll(){
  if(!s||s.role!=='owner')return;
- const {rows,all,from}=payrollData();
- const out=[['Сотрудник','Смены','Почасовая работа, ч','Начислено, руб.','Статус выплаты']];
- for(const x of rows)out.push([x.name,x.shifts,Number(x.hours.toFixed(2)),x.gross,all?'Сводка':s.payments?.[from+'|'+x.name]?'Выплачено':'Не выплачено']);
- out.push(['Общий фонд','','',Math.round(rows.reduce((a,x)=>a+x.gross,0)*100)/100,'']);
+ const {rows,all,from}=payrollData(),payments=s.payments||{},key=all?'all':from;
+ const out=[['Сотрудник','Смены','Почасовая работа, ч','Начислено','Штраф / возврат','К выплате','Статус выплаты','Выплачено','Дата отметки']];
+ for(const x of rows){const p=payments[key+'|'+x.name];out.push([x.name,x.shifts,Number(x.hours.toFixed(2)),x.gross,x.fine,x.net,p?'Выплачено':'Не выплачено',p?.amount??'',p?.at??''])}
+ out.push(['Общий фонд','','',rows.reduce((a,x)=>a+x.gross,0),rows.reduce((a,x)=>a+x.fine,0),rows.reduce((a,x)=>a+x.net,0),'','','']);
  const text='\ufeff'+out.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
  const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
- a.href=url;a.download='По_графику_начисления_'+(all?'весь_период':from)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ a.href=url;a.download='По_графику_зарплата_'+(all?'весь_период':from)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function payrollAction(operation,name,amount){
+ if(!s||s.role!=='owner'||mutateBusy)return;
+ mutateBusy=true;
+ try{
+  const result=await sb.rpc('pvz2_owner_payroll',{p_token:token,p_week:E('payrollWeek').value==='all'?'all':monday(E('week').value),p_employee:name,p_operation:operation,p_amount:amount===undefined?null:amount,p_expected_version:s.version});
+  if(result.error)throw Error(result.error.message);
+  s={...s,payments:result.data.payments,version:Number(result.data.version)};
+  renderPayroll();syncLabel('Сохранено · '+syncClock(),'ok');
+ }catch(e){E('status').textContent='Ошибка сохранения: '+e.message}
+ finally{mutateBusy=false}
+}
+function payrollFine(input){
+ const amount=Number(input.value),name=decodeURIComponent(input.dataset.employee);
+ if(!Number.isFinite(amount)||Math.abs(amount)>1000000||Math.abs(amount*100-Math.round(amount*100))>.000001){
+  alert('Введите сумму от -1 000 000 до 1 000 000 ₽');renderPayroll();return;
+ }
+ payrollAction('fine',name,amount);
+}
+function payrollMark(operation,encoded){
+ const name=decodeURIComponent(encoded);
+ if(confirm(operation==='mark'?'Подтвердить выплату сотруднику '+name+'?':'Снять отметку выплаты сотруднику '+name+'?'))payrollAction(operation,name);
 }
 async function mutate(action,p){
  if(!s||mutateBusy)return;
