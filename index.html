@@ -433,7 +433,7 @@ body.assignment-open{overflow:hidden}
       <div class="formfield"><label for="opens">Начало работы</label><input id="opens" type="time" value="10:00"></div>
       <div class="formfield"><label for="closes">Окончание работы</label><input id="closes" type="time" value="22:00"></div>
       <div class="formfield wide"><label for="names">Сотрудники — каждое имя с новой строки</label><textarea id="names" rows="4"></textarea></div>
-      <div class="formfield wide"><label>Рабочие дни</label><div id="days" class="day-checks"></div></div>
+      <div class="formfield"><label for="payMode">Период расчёта зарплаты</label><select id="payMode"><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно (аванс + зарплата)</option></select></div><div class="formfield wide"><label>Рабочие дни</label><div id="days" class="day-checks"></div></div>
      </div>
     </div>
     <div class="formgroup"><h3>Оплата труда</h3><div class="grid-form">
@@ -523,7 +523,7 @@ body.assignment-open{overflow:hidden}
  </div>
   <section id="paySection" class="card pay-card hide">
    <div class="card-header"><div><h2>Еженедельные выплаты</h2><p>Начисления по назначенным сменам выбранной недели</p></div></div>
-   <div class="payroll-toolbar"><label for="payrollWeek">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
+   <div class="payroll-toolbar"><label for="payrollMonth" id="payrollMonthBox" class="hide">Месяц расчёта <input id="payrollMonth" type="month" onchange="renderPayroll()"></label><label for="payrollWeek" id="payrollWeekBox">Неделя расчёта <select id="payrollWeek" onchange="renderPayroll()"><option value="current">Текущая неделя графика</option><option value="all">Весь период</option></select></label><button type="button" onclick="exportPayroll()">Скачать CSV</button></div>
    <p class="payroll-note" id="payrollPeriod"></p><div id="pay" class="table-scroll"></div>
   </section>
   <section id="owner" class="card settings-card hide">
@@ -590,7 +590,7 @@ async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'C
 async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,staffPassword:E('staffPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days')},rates:{shift:+E('shift').value,half:+E('half').value,hour:+E('hour').value},jobRoles:[],employeeRoles:{}});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
 function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());fill();E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
-function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');renderJobRoles();dayUI('editDays',s.config.days)}
+function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editShift').value=s.rates.shift;E('editHalf').value=s.rates.half??Number((s.rates.shift/2).toFixed(2));E('editHour').value=s.rates.hour;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
 function syncClock(){return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function syncLabel(message,state='ok'){
  E('syncState').textContent=message;
@@ -816,8 +816,52 @@ function payrollData(){
  });
  return {rows,all,from,end};
 }
+function monthlyRows(){
+ const month=E('payrollMonth').value||iso(new Date()).slice(0,7),paid=s.payments||{},adv=paid.__advances||{},fines=paid.__fines||{},schedule=s.schedule||[];
+ const names=[...new Set([...s.employees,...schedule.map(x=>x.employee).filter(Boolean)])];
+ return {month,rows:names.map(name=>{
+  const gross=Math.round(schedule.filter(x=>x.employee===name&&x.date.startsWith(month)).reduce((v,x)=>v+Number(x.pay||0),0)*100)/100;
+  const fine=Object.entries(fines).reduce((v,[k,n])=>v+(k.startsWith(month)&&k.endsWith('|'+name)?Number(n||0):0),0);
+  const a=adv[month+'|'+name]||{amount:0},advancePaid=a.at?Number(a.amount||0):0;
+  return {name,gross,fine,advance:a,advancePaid,net:Math.round((gross-fine-advancePaid)*100)/100,salary:paid['salary|'+month+'|'+name]};
+ })};
+}
+function renderMonthlyPayroll(){
+ const {month,rows}=monthlyRows();if(!E('payrollMonth').value)E('payrollMonth').value=month;
+ E('payrollPeriod').textContent='За '+month+' · один аванс на сотрудника, итог за вычетом выплаченного аванса и штрафов';
+ E('pay').innerHTML='<table class="paytable payroll-report"><thead><tr><th>Сотрудник</th><th>Начислено</th><th>Штрафы / возвраты</th><th>Аванс, ₽</th><th>К выплате</th><th>Закрытие</th></tr></thead><tbody>'+
+ rows.map(x=>{const n=encodeURIComponent(x.name),a=x.advance;
+ const advance=a.at?'<b>✓ Аванс выплачен '+rub(a.amount)+'</b><button class="small" onclick="monthlyAction(&quot;advance_unpaid&quot;,&quot;'+n+'&quot;)">Отменить аванс</button>':'<button class="small" onclick="monthlyAction(&quot;advance_paid&quot;,&quot;'+n+'&quot;)">Отметить аванс</button>';
+ const salary=x.salary?'<b>✓ Зарплата выплачена '+rub(x.salary.amount)+'</b><button class="small" onclick="monthlyAction(&quot;salary_unpaid&quot;,&quot;'+n+'&quot;)">Отменить отметку</button>':x.net>0?'<button class="small" onclick="monthlyAction(&quot;salary_paid&quot;,&quot;'+n+'&quot;)">Выплачена зарплата</button>':'—';
+ return '<tr><td>'+esc(x.name)+'</td><td>'+rub(x.gross)+'</td><td>'+rub(x.fine)+'</td><td><input type="number" min="0" max="1000000" step=".01" class="fine-input" value="'+Number(a.amount||0)+'" data-employee="'+n+'" aria-label="Аванс '+esc(x.name)+'" '+(a.at?'disabled':'onchange="saveAdvance(this)"')+'>'+advance+'</td><td class="sum">'+rub(x.net)+'</td><td>'+salary+'</td></tr>'}).join('')+
+ '<tr class="payroll-total"><td>Общий фонд</td><td>'+rub(rows.reduce((a,x)=>a+x.gross,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.fine,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.advancePaid,0))+'</td><td class="sum">'+rub(rows.reduce((a,x)=>a+x.net,0))+'</td><td></td></tr></tbody></table>';
+}
+async function monthlyAction(op,encoded,amount=null){
+ if(mutateBusy||!s||s.role!=='owner')return;
+ const name=decodeURIComponent(encoded);
+ if(op!=='advance'&&!confirm('Подтвердить действие для '+name+'?'))return;
+ mutateBusy=true;
+ try{
+  const result=await sb.rpc('pvz2_monthly_payroll',{p_token:token,p_op:op,p_period:E('payrollMonth').value||iso(new Date()).slice(0,7),p_employee:name,p_amount:amount,p_version:s.version});
+  if(result.error)throw Error(result.error.message);
+  s={...s,payments:result.data.payments,config:result.data.config,version:Number(result.data.version)};
+  draw();syncLabel('Сохранено · '+syncClock(),'ok');
+ }catch(e){E('status').textContent='Не сохранено: '+e.message;await syncNow(true)}
+ finally{mutateBusy=false}
+}
+function saveAdvance(input){
+ const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>1000000||Math.abs(value*100-Math.round(value*100))>.001){alert('Введите сумму аванса до 1 000 000 ₽');renderMonthlyPayroll();return}
+ monthlyAction('advance',input.dataset.employee,value);
+}
+function exportMonthlyPayroll(){
+ const {month,rows}=monthlyRows(),data=[['Сотрудник','Начислено','Штрафы','Аванс выплачен','Остаток','Зарплата выплачена']];
+ rows.forEach(x=>data.push([x.name,x.gross,x.fine,x.advancePaid,x.net,x.salary?'Да':'Нет']));
+ const csv='\ufeff'+data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='Зарплата_'+month+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
+ const monthly=s.config.payrollMode==='monthly';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
  const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
  E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
  const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
@@ -831,6 +875,7 @@ function renderPayroll(){
 }
 function exportPayroll(){
  if(!s||s.role!=='owner')return;
+ if(s.config.payrollMode==='monthly'){exportMonthlyPayroll();return}
  const {rows,all,from}=payrollData(),payments=s.payments||{},key=all?'all':from;
  const out=[['Сотрудник','Смены','Почасовая работа, ч','Начислено','Штраф / возврат','К выплате','Статус выплаты','Выплачено','Дата отметки']];
  for(const x of rows){const p=payments[key+'|'+x.name];out.push([x.name,x.shifts,Number(x.hours.toFixed(2)),x.gross,x.fine,x.net,p?'Выплачено':'Не выплачено',p?.amount??'',p?.at??''])}
@@ -904,7 +949,7 @@ async function assign(){if(s.jobRoles.length&&!E('jobRole').value){E('status').t
   try{const result=await sb.rpc('pvz2_assign_half',{p_token:token,p_date:E('date').value,p_position:+E('position').value,p_employee_index:+E('employee').value,p_start:E('start').value,p_end:E('end').value,p_role_id:E('jobRole').value,p_expected_version:s.version});if(result.error)throw Error(result.error.message);s={...s,schedule:result.data.schedule,version:Number(result.data.version)};closeAssignment();draw();syncLabel('Сохранено · '+syncClock(),'ok')}catch(e){E('status').textContent='Не сохранено: '+e.message}finally{mutateBusy=false}return;
  }mutate('assign',{date:E('date').value,position:+E('position').value,employeeIndex:+E('employee').value,jobRoleId:E('jobRole').value,kind:E('kind').value,start:E('start').value,end:E('end').value})}
 function removeShift(id){if(confirm('Снять сотрудника со смены?'))mutate('remove',{id})}
-function settings(){if(editVersion!==s.version){E('status').textContent='За время редактирования данные точки изменились. Закройте и снова откройте настройки, чтобы не перезаписать чужие изменения.';E('status').scrollIntoView({behavior:'smooth',block:'nearest'});return}try{const roles=collectJobRoles(),mapping=collectEmployeeRoles();mutate('settings',{name:E('editName').value,employees:list('editNames'),config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays')},rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},jobRoles:roles,employeeRoles:mapping})}catch(e){E('status').textContent=e.message}}
+async function settings(){if(editVersion!==s.version){E('status').textContent='За время редактирования данные точки изменились. Закройте и снова откройте настройки, чтобы не перезаписать чужие изменения.';E('status').scrollIntoView({behavior:'smooth',block:'nearest'});return}try{if(E('payMode').value!==(s.config.payrollMode||'weekly')){const o=await sb.rpc('pvz2_monthly_payroll',{p_token:token,p_op:'mode',p_period:E('payMode').value,p_employee:'',p_amount:null,p_version:s.version});if(o.error)throw Error(o.error.message);s={...s,config:o.data.config,version:Number(o.data.version)};editVersion=s.version}const roles=collectJobRoles(),mapping=collectEmployeeRoles();mutate('settings',{name:E('editName').value,employees:list('editNames'),config:{positions:+E('editPositions').value,opens:E('editOpens').value,closes:E('editCloses').value,days:days('editDays')},rates:{shift:+E('editShift').value,half:+E('editHalf').value,hour:+E('editHour').value},jobRoles:roles,employeeRoles:mapping})}catch(e){E('status').textContent=e.message}}
 function paid(n){mutate('paid',{week:monday(E('week').value),employee:decodeURIComponent(n)})}
 function logout(){closeAssignment();let old=token;token='';sessionStorage.removeItem('pvz2token');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
 function togglePassword(id,btn){const x=E(id),shown=x.type==='password';x.type=shown?'text':'password';btn.textContent=shown?'◌':'◉';btn.setAttribute('aria-label',shown?'Скрыть пароль':'Показать пароль')}
