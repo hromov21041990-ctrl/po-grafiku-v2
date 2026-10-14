@@ -1205,19 +1205,31 @@ if(sb)sb.auth.getSession().then(({data,error})=>{
  if(data.session)loadPoints();
 });else if(token)api('load').then(enter).catch(logout);
 </script>
-<div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="location.replace(location.pathname+'?updated='+Date.now())">Обновить</button></div>
+<div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-14-mobile-update-1';
+const CURRENT_BUILD='2026-10-14-update-notice-fixed-1';
 let lastUpdateCheck=0;
-async function checkAppUpdate(){
- if(Date.now()-lastUpdateCheck<30000)return;lastUpdateCheck=Date.now();
+async function checkAppUpdate(force=false){
+ if(!force&&Date.now()-lastUpdateCheck<30000)return;
+ lastUpdateCheck=Date.now();
+ const notice=document.getElementById('updateNotice');
+ if(!notice)return;
  try{
-  const response=await fetch('./app-version.json?check='+Date.now(),{cache:'no-store'});
+  const url=new URL('./app-version.json',location.href);
+  url.searchParams.set('check',String(Date.now()));
+  const response=await fetch(url.toString(),{cache:'no-store'});
   if(!response.ok)return;
   const data=await response.json();
-  if(data.build&&data.build!==CURRENT_BUILD)document.getElementById('updateNotice').hidden=false;
- }catch(e){}
+  notice.hidden=!(typeof data.build==='string'&&data.build!==CURRENT_BUILD);
+ }catch(error){notice.hidden=true}
 }
-window.addEventListener('pageshow',()=>checkAppUpdate());
+function updateAppNow(){
+ const notice=document.getElementById('updateNotice');
+ if(notice)notice.hidden=true;
+ const url=new URL(location.href);
+ url.searchParams.set('updated',String(Date.now()));
+ location.replace(url.toString());
+}
+window.addEventListener('pageshow',()=>checkAppUpdate(true));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkAppUpdate()});
 </script></body></html>
