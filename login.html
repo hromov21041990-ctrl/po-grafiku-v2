@@ -448,7 +448,7 @@ body.member-credentials-open{overflow:hidden}
     <h2 class="formtitle">Настройте свою точку</h2><p class="formnote">Достаточно нескольких параметров, чтобы начать пользоваться графиком.</p>
     <div class="grid-form">
      <div class="formfield"><label for="name">Название компании или точки</label><input id="name" placeholder="Например, Магазин на Ленина" autocomplete="organization"></div>
-     <div class="formfield"><label for="code">Код для входа (латиницей)</label><input id="code" placeholder="my-shop" autocapitalize="none" autocomplete="off"></div>
+     <div class="formfield wide"><p class="formnote" style="margin:2px 0 0"><strong>ID точки создаётся автоматически.</strong> После регистрации он появится в «Моих точках» и будет использоваться сотрудниками для входа.</p></div>
      <div class="formfield hide" id="legacyOwnerPasswordField"><label for="ownerPass">Пароль владельца (используется только в старой системе входа)</label><div class="pass-wrap"><input id="ownerPass" type="password" autocomplete="new-password"><button type="button" aria-label="Показать пароль" onclick="togglePassword('ownerPass',this)">◉</button></div></div>
      <p class="formnote">Личные пароли сотрудников выдаются после создания точки в настройках доступа.</p>
     </div>
@@ -468,7 +468,7 @@ body.member-credentials-open{overflow:hidden}
    <div id="signin"><div class="formfield wide" id="emailLoginWrap"><label for="emailLogin">Электронная почта владельца</label><input id="emailLogin" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
     <h2 class="formtitle">С возвращением!</h2><p class="formnote">Войдите, чтобы управлять сменами и выплатами.</p>
     <div class="grid-form">
-     <div class="formfield wide" id="staffCodeWrap"><label for="signinCode">Код вашей точки</label><input id="signinCode" placeholder="my-shop" autocapitalize="none" autocomplete="off" disabled></div><div class="formfield wide hide" id="memberLoginWrap"><label for="memberLoginName">Личный логин сотрудника</label><input id="memberLoginName" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Например, u7a3b"><p class="formnote">Логин выдаёт владелец. Это не email и не имя сотрудника в графике.</p></div>
+     <div class="formfield wide" id="staffCodeWrap"><label for="signinCode">ID точки</label><input id="signinCode" placeholder="pg-000001" autocapitalize="none" autocomplete="off" disabled></div><div class="formfield wide hide" id="memberLoginWrap"><label for="memberLoginName">Личный логин сотрудника</label><input id="memberLoginName" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Например, u7a3b"><p class="formnote">Логин выдаёт владелец. Это не email и не имя сотрудника в графике.</p></div>
      <div class="formfield wide"><label for="role">Роль</label><select id="role"><option value="owner">Владелец</option><option value="staff">Сотрудник / Администратор</option></select></div>
      <div class="formfield wide"><label for="pass">Пароль</label><div class="pass-wrap"><input id="pass" type="password" autocomplete="current-password"><button type="button" aria-label="Показать пароль" onclick="togglePassword('pass',this)">◉</button></div></div>
     </div>
@@ -657,7 +657,7 @@ function settleConfirmation(answer){
 function appNotice(message){const box=E('previewNotice');box.textContent=message;box.hidden=false;clearTimeout(appNotice.timer);appNotice.timer=setTimeout(()=>box.hidden=true,7000)}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&confirmationResolve){e.preventDefault();settleConfirmation(false)}});
 
-async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
+async function register(){try{let r=await api('register',{name:E('name').value,ownerPassword:E('ownerPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
 function enter(r){
  token=r.token||token;writeAppToken(token);E('pass').value='';
@@ -873,7 +873,7 @@ function draw(){
  const owed=assigned.reduce((a,x)=>a+Number(x.pay||0),0);
  const fmt=v=>new Date(v+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
  E('company').textContent=s.name;
- E('summary').textContent=s.employees.length+' сотрудников · '+s.config.positions+' мест в смене · '+s.config.opens+'–'+s.config.closes;
+ E('summary').textContent='ID '+(s.publicCode||s.code)+' · '+s.employees.length+' сотрудников · '+s.config.positions+' мест в смене · '+s.config.opens+'–'+s.config.closes;
  E('period').textContent=fmt(from)+' — '+fmt(to)+' · '+assigned.length+' назначений';
  E('sidebarCompany').textContent=s.name;
  E('sidePoints').classList.toggle('hide',E('backPoints').classList.contains('hide')||s.role!=='owner');
@@ -1165,11 +1165,11 @@ let addingPoint=false;
 async function authSession(){if(!sb)throw Error('Не загрузился модуль авторизации');const {data:{session}}=await sb.auth.getSession();if(!session)throw Error('Войдите по email');return session}
 async function emailCall(action,p={}){const a=await authSession();return api(action,{authToken:a.access_token,...p})}
 async function signupEmail(){try{if(!sb)throw Error('Не загрузился модуль авторизации');const {error}=await sb.auth.signUp({email:E('ownerEmail').value.trim().toLowerCase(),password:E('accountPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;E('emailStatus').textContent='Проверьте почту и перейдите по ссылке подтверждения. Затем войдите в аккаунт.'}catch(e){E('emailStatus').textContent=e.message}}
-async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth').classList.add('hide');E('app').classList.add('hide');E('pointPicker').classList.remove('hide');document.body.classList.remove('beta-in-app');E('pointsList').innerHTML=q.points.map(p=>'<button onclick="enterPoint(\''+p.id+'\')">'+esc(p.name)+' · '+esc(p.code)+'</button>').join('')||'<p class="muted">Пока нет точек. Создайте первую.</p>'}catch(e){appNotice(e.message)}}
+async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth').classList.add('hide');E('app').classList.add('hide');E('pointPicker').classList.remove('hide');document.body.classList.remove('beta-in-app');E('pointsList').innerHTML=q.points.map(p=>'<button onclick="enterPoint(\''+p.id+'\')">'+esc(p.name)+' · ID '+esc(p.public_code||p.code)+'</button>').join('')||'<p class="muted">Пока нет точек. Создайте первую.</p>'}catch(e){appNotice(e.message)}}
 async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){appNotice(e.message)}}
 function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('authTabs').classList.add('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
 async function accountLogout(){settleConfirmation(false);clearMemberCredentials();E('firstPasswordOverlay').classList.add('hide');E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';if(sb)await sb.auth.signOut();token='';s=null;writeAppToken('');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
-async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
+async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
 function authErrorText(e){const code=String(e?.code||''),message=String(e?.message||'Ошибка авторизации');
  if(code==='invalid_credentials'||/Invalid login credentials/i.test(message))return 'Неверный email или пароль. Проверьте сохранённый пароль в «Паролях» телефона или восстановите доступ по email.';
  if(code==='email_not_confirmed'||/Email not confirmed/i.test(message))return 'Сначала подтвердите email по ссылке из письма.';
@@ -1303,7 +1303,7 @@ function showMemberCredentials(employee,credentials){
  if(!credentials||typeof credentials.login!=='string'||!credentials.login||typeof credentials.password!=='string'||!credentials.password)throw Error('Сервер не вернул логин или новый пароль. Проверьте доступ и обратитесь в поддержку.');
  const overlay=E('memberCredentialsOverlay');
  E('memberCredentialsName').textContent=employee;
- E('memberCredentialPoint').value=String(s?.code||'');
+ E('memberCredentialPoint').value=String(s?.publicCode||s?.code||'');
  E('memberCredentialLogin').value=credentials.login;
  E('memberCredentialPassword').value=credentials.password;
  E('memberCredentialCopyStatus').textContent='';
@@ -1419,7 +1419,7 @@ function openHelp(tab='guide'){
  setHelpTab(tab);
  const email=s?E('emailLogin').value.trim():E('emailLogin').value.trim()||E('ownerEmail').value.trim();
  if(email&&!E('supportEmail').value)E('supportEmail').value=email;
- if(s?.code&&!E('app').classList.contains('hide'))E('supportPoint').value=s.code;
+ if(s?.code&&!E('app').classList.contains('hide'))E('supportPoint').value=s.publicCode||s.code;
  E('helpGuideTab').focus();
 }
 function closeHelp(){E('helpOverlay').classList.add('hide');document.body.classList.remove('help-open')}
@@ -1482,7 +1482,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-14-personal-passwords-production-2';
+const CURRENT_BUILD='2026-10-14-auto-point-id-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
