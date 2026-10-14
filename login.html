@@ -715,16 +715,33 @@ function collectJobRoles(){
 function collectEmployeeRoles(){
  return Object.fromEntries([...E('editEmployeeRoles').querySelectorAll('select')].filter(el=>el.value).map(el=>[el.dataset.name,el.value]));
 }
-function renderRoleSelect(){
+function rememberedEmployeeRole(name){
+ const valid=new Set((s.jobRoles||[]).map(x=>x.id));
+ const fixed=s.employeeRoles?.[name]||'';
+ if(valid.has(fixed))return fixed;
+ if(s.role!=='owner')return '';
+ const history=(s.schedule||[]).filter(x=>x.employee===name&&valid.has(x.jobRoleId)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ return history[0]?.jobRoleId||'';
+}
+function renderRoleSelect(reset=false){
  if(!s)return;
- const sel=E('jobRole'),old=sel.value,roles=s.jobRoles||[];
- if(!roles.length){sel.innerHTML='<option value="">Должности ещё не добавлены</option>';sel.disabled=true;showRoleRate();return}
- sel.disabled=false;
- const who=s.employees[+E('employee').value]||s.employees[0];
- const mapped=s.employeeRoles[who]||'';
- const allowed=s.role==='owner'?roles:roles.filter(r=>r.id===mapped);
+ const sel=E('jobRole'),roles=s.jobRoles||[];
+ const who=s.employees[Number(E('employee').value)]||s.employees[0]||'';
+ const mapped=rememberedEmployeeRole(who);
+ const old=sel.value;
+ const changed=reset||sel.dataset.employee!==who||sel.dataset.mapped!==mapped;
+ const allowed=s.role==='owner'?roles:roles.filter(r=>r.id===s.employeeRoles?.[who]);
+ if(!roles.length){
+  sel.innerHTML='<option value="">Должности ещё не добавлены</option>';
+  sel.disabled=true;sel.dataset.employee=who;sel.dataset.mapped='';
+  showRoleRate();return;
+ }
+ sel.disabled=allowed.length===0;
  sel.innerHTML='<option value="">Выберите должность</option>'+allowed.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
- sel.value=allowed.some(r=>r.id===old)?old:(allowed.some(r=>r.id===mapped)?mapped:'');
+ const wanted=changed?mapped:old;
+ sel.value=allowed.some(r=>r.id===wanted)?wanted:'';
+ sel.dataset.employee=who;
+ sel.dataset.mapped=mapped;
  showRoleRate();
 }
 function showRoleRate(){
@@ -747,7 +764,7 @@ function chooseShift(date,position){
  lastAssignmentTrigger=document.activeElement;
  E('date').value=date;
  E('position').value=String(position);
- renderRoleSelect();
+ renderRoleSelect(true);
  E('assignmentOverlay').classList.remove('hide');
  document.body.classList.add('assignment-open');
  requestAnimationFrame(()=>E('employee').focus({preventScroll:true}));
@@ -787,7 +804,7 @@ function draw(){
  if(s.role!=='owner')E('owner').classList.add('hide');
  const existingEmp=E('employee').value,existingPos=E('position').value;
  E('employee').innerHTML=s.employees.map((x,i)=>'<option value="'+i+'">'+esc(x)+'</option>').join('');
- E('position').innerHTML=Array.from({length:s.config.positions},(_,i)=>'<option value="'+i+'">Место '+(i+1)+'</option>').join('');renderRoleSelect();
+ E('position').innerHTML=Array.from({length:s.config.positions},(_,i)=>'<option value="'+i+'">Место '+(i+1)+'</option>').join('');
  if(existingEmp&&E('employee').querySelector('option[value="'+existingEmp+'"]'))E('employee').value=existingEmp;
  renderRoleSelect();
  if(existingPos&&E('position').querySelector('option[value="'+existingPos+'"]'))E('position').value=existingPos;
@@ -1179,7 +1196,7 @@ async function sendSupportTicket(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!E('helpOverlay').classList.contains('hide'))closeHelp()});
 
-E('employee').addEventListener('change',renderRoleSelect);E('kind').addEventListener('change',showRoleRate);
+E('employee').addEventListener('change',()=>renderRoleSelect(true));E('kind').addEventListener('change',showRoleRate);
 initAuthRecovery();
 dayUI('days',[0,1,2,3,4,5,6]);namesFill();addCreateJobRole();mode(true);E('role').onchange=()=>mode(true);
 if(sb)sb.auth.getSession().then(({data,error})=>{
