@@ -407,6 +407,7 @@ body.assignment-open{overflow:hidden}
 </style><style id="update-notice-style">#updateNotice{position:fixed;z-index:190;left:12px;right:12px;bottom:calc(82px + env(safe-area-inset-bottom));max-width:460px;margin:auto;background:#0F2D3D;color:white;padding:14px 16px;border-radius:14px;box-shadow:0 10px 35px #0004;display:flex;align-items:center;gap:12px}#updateNotice[hidden]{display:none}#updateNotice span{flex:1;font-size:13px;line-height:1.45}#updateNotice button{background:#22C998;color:#06382B;border:0;padding:10px 12px;border-radius:9px;font-weight:800;cursor:pointer}</style>
 <style id="member-credentials-style">
 .member-credentials-overlay{position:fixed;inset:0;z-index:250;background:rgba(9,27,39,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+#previewConfirmation{z-index:400}
 .member-credentials-dialog{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;background:white;border:1px solid #BCEADD;border-radius:20px;box-shadow:0 25px 80px rgba(0,0,0,.23);padding:26px;color:#0F2D3D}
 .member-credentials-dialog h2{margin:6px 0 9px;font-size:25px}
 .member-credentials-dialog p{font-size:13px;color:#526977}
@@ -423,7 +424,7 @@ body.assignment-open{overflow:hidden}
 body.member-credentials-open{overflow:hidden}
 @media(max-width:600px){.member-credentials-overlay{align-items:flex-end;padding:0}.member-credentials-dialog{max-height:94dvh;width:100%;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}.member-credentials-dialog h2{font-size:21px}.member-credential-line input{font-size:14px}.member-credential-line button{font-size:11px;padding:8px}.member-credentials-actions{grid-template-columns:1fr}.member-credentials-actions button{width:100%}}
 </style>
-</head>
+<style id="pw-onboarding-css">#firstPasswordOverlay{position:fixed;inset:0;z-index:290;display:flex;align-items:center;justify-content:center;background:rgba(10,27,42,.82);padding:15px}#firstPasswordOverlay.hide{display:none}#firstPasswordOverlay .pw-dialog{width:min(470px,100%);max-height:calc(100dvh - 30px);overflow-y:auto;padding:25px;background:#fff;color:#0F2D3D;border-radius:18px}#firstPasswordOverlay h2{font-size:23px;margin:0 0 10px}#firstPasswordOverlay label{display:block;margin:14px 0 5px;font-weight:650}#firstPasswordOverlay .pw-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}#firstPasswordOverlay .pw-actions button{flex:1}#firstPasswordOverlay .pw-error{color:#a33b3b;min-height:24px}#firstPasswordOverlay input{font-size:16px}@media(max-width:570px){#firstPasswordOverlay{align-items:flex-end;padding:0}#firstPasswordOverlay .pw-dialog{border-radius:18px 18px 0 0;width:100%;max-height:95dvh;padding:22px 16px calc(16px + env(safe-area-inset-bottom))}}</style></head>
 <body>
 <div class="page">
  <header class="topbar" aria-label="По графику">
@@ -540,7 +541,7 @@ body.member-credentials-open{overflow:hidden}
     <div class="formfield"><label for="start">Начало</label><input id="start" type="time"></div>
     <div class="formfield"><label for="end">Окончание</label><input id="end" type="time"></div>
    </div>
-   <p id="roleRatePreview" class="formnote"></p><p id="assignmentError" class="error" role="alert" aria-live="assertive"></p><div class="work-actions"><button class="primary" onclick="assign()">Сохранить назначение</button><button type="button" onclick="closeAssignment()">Отмена</button></div>
+   <p id="roleRatePreview" class="formnote"></p><p id="assignmentError" class="error" role="alert" aria-live="assertive"></p><div class="work-actions"><button id="assignmentSave" type="button" class="primary" onclick="saveAssignment()">Сохранить назначение</button><button type="button" onclick="closeAssignment()">Отмена</button></div>
   </section>
  </div>
   <section id="myPaySection" class="card pay-card hide"><div class="card-header"><div><h2>Мои начисления</h2><p>Личный расчёт по назначенным сменам. Только просмотр.</p></div></div><div id="myPayBody"></div></section><section id="paySection" class="card pay-card hide">
@@ -564,7 +565,7 @@ body.member-credentials-open{overflow:hidden}
 <div class="formfield wide"><label>Должность сотрудника по умолчанию</label><div id="editEmployeeRoles" class="job-mapping"></div><p class="formnote">При назначении смены владелец может выбрать другую должность. Ставка берётся из выбранной должности и сохраняется в смене.</p></div>
    </div>
    <div class="work-actions"><button class="primary" onclick="settings()">Сохранить настройки</button><button onclick="toggleSettings()">Отмена</button></div>
-   <div class="security-box" id="memberAccessBox"><h3>Личные доступы сотрудников</h3><p class="formnote">Администратор назначает и снимает смены. Сотрудник только просматривает график и свои начисления.</p><div id="memberAccessRows" class="job-mapping"></div><p id="memberAccessStatus" class="security-message" role="status"></p><p class="formnote" style="margin-top:14px">Логин создаётся автоматически при выдаче доступа. Его можно посмотреть здесь в любое время. Пароль показывается только при создании или обновлении — после закрытия окна его уже не посмотреть.</p></div><div class="security-box"><h3>Безопасность и доступ</h3><p class="formnote">Пароль владельца email-аккаунта восстанавливается по почте. Здесь можно обновить резервный код точки.</p>
+   <div class="security-box" id="memberAccessBox"><h3>Личные доступы сотрудников</h3><p class="formnote">Администратор назначает и снимает смены. Сотрудник только просматривает график и свои начисления.</p><div id="memberAccessRows" class="job-mapping"></div><p id="memberAccessStatus" class="security-message" role="status"></p><p class="formnote" style="margin-top:14px">Логин предложен по имени сотрудника. Его можно изменить в поле перед выдачей доступа. Его можно посмотреть здесь в любое время. Пароль показывается только при создании или обновлении — после закрытия окна его уже не посмотреть.</p></div><div class="security-box"><h3>Безопасность и доступ</h3><p class="formnote">Пароль владельца email-аккаунта восстанавливается по почте. Здесь можно обновить резервный код точки.</p>
    <div class="grid-form"><div class="formfield"><label for="newOwnerPassword">Новый пароль email-аккаунта</label><div class="pass-wrap"><input id="newOwnerPassword" type="password" autocomplete="new-password" placeholder="Не менее 10 символов"><button type="button" aria-label="Показать пароль" onclick="togglePassword('newOwnerPassword',this)">◉</button></div></div>
    <p class="formnote">Пароль каждого сотрудника переиздаётся отдельно в разделе выше.</p></div>
    <div class="work-actions"><button onclick="changePasswords()">Изменить пароль аккаунта</button><button onclick="rotateRecovery()">Создать новый резервный код</button></div>
@@ -605,31 +606,71 @@ body.member-credentials-open{overflow:hidden}
   </div>
  </section>
 </div>
+<div id="firstPasswordOverlay" class="hide" role="presentation"><section class="pw-dialog" role="dialog" aria-modal="true" aria-labelledby="firstPasswordTitle"><h2 id="firstPasswordTitle">Создайте личный пароль</h2><p>Вы вошли с временным паролем для сотрудника <strong id="firstPasswordEmployee"></strong>. Сначала установите новый пароль. После этого откроется график.</p><label for="firstPasswordNew">Новый пароль (от 10 символов)</label><input id="firstPasswordNew" type="password" minlength="10" maxlength="128" autocomplete="new-password" placeholder="Придумайте новый пароль"><label for="firstPasswordRepeat">Повторите пароль</label><input id="firstPasswordRepeat" type="password" minlength="10" maxlength="128" autocomplete="new-password" placeholder="Повторите новый пароль"><p id="firstPasswordError" class="pw-error" role="alert"></p><div class="pw-actions"><button class="primary" type="button" id="firstPasswordSave" onclick="saveFirstPassword()">Сохранить и войти</button><button type="button" onclick="logout()">Выйти</button></div></section></div><div id="previewConfirmation" class="member-credentials-overlay hide"><section class="member-credentials-dialog" role="dialog" aria-modal="true" aria-labelledby="previewConfirmationTitle"><h2 id="previewConfirmationTitle">Подтвердите действие</h2><p id="previewConfirmationText"></p><div class="member-credentials-actions"><button class="primary" type="button" onclick="settleConfirmation(true)">Продолжить</button><button id="previewConfirmationCancel" type="button" onclick="settleConfirmation(false)">Отмена</button></div></section></div>
+<div id="previewNotice" hidden role="status" style="position:fixed;bottom:20px;left:16px;right:16px;z-index:350;padding:16px;border-radius:12px;background:#0F2D3D;color:white"></div>
 <div id="memberCredentialsOverlay" class="member-credentials-overlay hide" role="presentation">
  <section class="member-credentials-dialog" role="dialog" aria-modal="true" aria-labelledby="memberCredentialsTitle" aria-describedby="memberCredentialsDescription">
   <span class="member-credentials-eyebrow">ДОСТУП СОТРУДНИКА СОЗДАН</span>
-  <h2 id="memberCredentialsTitle">Логин и новый пароль</h2>
-  <p id="memberCredentialsDescription">Данные для <strong id="memberCredentialsName"></strong>. Передайте их сотруднику лично. Это данные для входа в приложение, не для регистрации владельца.</p>
+  <h2 id="memberCredentialsTitle">Логин и временный пароль</h2>
+  <p id="memberCredentialsDescription">Данные для <strong id="memberCredentialsName"></strong>. Передайте их сотруднику лично. При первом входе ему потребуется создать свой пароль.</p>
   <div class="member-credentials-fields">
    <div><label for="memberCredentialPoint">1. Код точки</label><div class="member-credential-line"><input id="memberCredentialPoint" readonly autocomplete="off" spellcheck="false" aria-label="Код точки"><button type="button" onclick="copySingleMemberCredential('memberCredentialPoint')" aria-label="Скопировать код точки">Копировать</button></div></div>
-   <div><label for="memberCredentialLogin">2. Логин сотрудника</label><div class="member-credential-line"><input id="memberCredentialLogin" readonly autocomplete="off" spellcheck="false" aria-label="Логин сотрудника"><button type="button" onclick="copySingleMemberCredential('memberCredentialLogin')" aria-label="Скопировать логин">Копировать</button></div><small>Логин создаётся автоматически. Это не email и не имя сотрудника.</small></div>
-   <div><label for="memberCredentialPassword">3. Новый пароль</label><div class="member-credential-line"><input id="memberCredentialPassword" readonly type="text" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Новый пароль сотрудника"><button type="button" onclick="copySingleMemberCredential('memberCredentialPassword')" aria-label="Скопировать пароль">Копировать</button></div><small>Старый пароль больше не действует.</small></div>
+   <div><label for="memberCredentialLogin">2. Логин сотрудника</label><div class="member-credential-line"><input id="memberCredentialLogin" readonly autocomplete="off" spellcheck="false" aria-label="Логин сотрудника"><button type="button" onclick="copySingleMemberCredential('memberCredentialLogin')" aria-label="Скопировать логин">Копировать</button></div><small>Логин указан в настройках доступа. Входить нужно именно по нему.</small></div>
+   <div><label for="memberCredentialPassword">3. Временный пароль</label><div class="member-credential-line"><input id="memberCredentialPassword" readonly type="text" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Временный пароль сотрудника"><button type="button" onclick="copySingleMemberCredential('memberCredentialPassword')" aria-label="Скопировать пароль">Копировать</button></div><small>Старый пароль больше не действует. При первом входе сотрудник обязан выбрать собственный пароль.</small></div>
   </div>
   <p class="member-credentials-warning">Сохраните пароль сейчас: после закрытия окна он больше не отображается. Чтобы получить новый, придётся повторно нажать «Новый пароль».</p>
   <p id="memberCredentialCopyStatus" class="security-message" role="status" aria-live="polite"></p>
+  <div id="memberManualCopy" class="hide"><label for="memberManualCopyText">Данные для ручного копирования</label><textarea id="memberManualCopyText" readonly rows="6" autocomplete="off" spellcheck="false" aria-label="Данные для ручного копирования"></textarea><p class="formnote">Выделите текст и выберите «Копировать» в меню устройства.</p></div>
   <div class="member-credentials-actions"><button class="primary" type="button" id="copyAllMemberCredentials" onclick="copyMemberCredentials()">Скопировать все данные</button><button type="button" onclick="closeMemberCredentials()">Закрыть</button></div>
  </section>
 </div>
 
 <script>
-const API='https://vyavhynnybsinkiievbu.supabase.co/functions/v1/pvz-v2-rbac',KEY='sb_publishable_eIWwXJEBGxYAbnhOc-MKfw_NitfQtB_',E=id=>document.getElementById(id);let token=sessionStorage.getItem('pvz2token')||'',s=null;let syncBusy=false,mutateBusy=false,lastSyncAttempt=0,editVersion=null;
+const API='https://vyavhynnybsinkiievbu.supabase.co/functions/v1/pvz-v2-rbac',KEY='sb_publishable_eIWwXJEBGxYAbnhOc-MKfw_NitfQtB_',E=id=>document.getElementById(id);let token=readAppToken(),s=null;let syncBusy=false,mutateBusy=false,lastSyncAttempt=0,editVersion=null;
 const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),add=(v,n)=>{let d=new Date(v+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)},monday=v=>add(v,-(new Date(v+'T12:00:00').getDay()+6)%7),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),rub=n=>Number(n).toLocaleString('ru-RU')+' ₽';
 const days=id=>[...E(id).querySelectorAll('input:checked')].map(x=>+x.value),dayUI=(id,checked)=>E(id).innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((x,i)=>'<label style="display:inline-block"><input type="checkbox" value="'+i+'" '+(checked.includes(i)?'checked':'')+'>'+x+'</label> ').join(''),list=id=>E(id).value.split('\n').map(x=>x.trim()).filter(Boolean);
 function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').classList.add('hide');E('reg').classList.toggle('hide',b);E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent=''}function namesFill(){let old=list('names'),n=Math.min(50,Math.max(1,+E('count').value||1));E('names').value=Array.from({length:n},(_,i)=>old[i]||'Сотрудник '+(i+1)).join('\n');renderCreateEmployeeRoles()}
-async function api(action,p={}){let r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})});let v=await r.json();if(!r.ok)throw Error(v.error||'Ошибка сервера');return v}
+function readAppToken(){try{return sessionStorage.getItem('pvz2token')||''}catch{return ''}}
+function writeAppToken(value){try{if(value)sessionStorage.setItem('pvz2token',value);else sessionStorage.removeItem('pvz2token')}catch{}}
+async function api(action,p={}){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+ try{
+  let r;
+  try{r=await fetch(API,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})})}
+  catch{throw Error(controller.signal.aborted?'Сервер не ответил вовремя. Нажмите «Обновить» и проверьте график перед повторным сохранением.':'Нет связи с сервером. Проверьте интернет и повторите действие.')}
+  const v=await r.json().catch(()=>null);
+  if(!r.ok){const e=Error(v?.error||'Сервер временно недоступен ('+r.status+'). Повторите позже.');e.status=r.status;e.code=v?.code;e.employee=v?.employee;throw e}
+  if(!v||typeof v!=='object')throw Error('Сервер вернул неполный ответ. Повторите действие.');
+  return v;
+ }finally{clearTimeout(timeout)}
+}
+let confirmationResolve=null,confirmationFocus=null;
+function appConfirm(message){
+ if(confirmationResolve)return Promise.resolve(false);
+ confirmationFocus=document.activeElement;E('previewConfirmationText').textContent=message;E('previewConfirmation').classList.remove('hide');E('previewConfirmationCancel').focus();
+ return new Promise(resolve=>confirmationResolve=resolve);
+}
+function settleConfirmation(answer){
+ const resolve=confirmationResolve;confirmationResolve=null;E('previewConfirmation').classList.add('hide');
+ confirmationFocus?.focus?.({preventScroll:true});confirmationFocus=null;if(resolve)resolve(answer);
+}
+function appNotice(message){const box=E('previewNotice');box.textContent=message;box.hidden=false;clearTimeout(appNotice.timer);appNotice.timer=setTimeout(()=>box.hidden=true,7000)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&confirmationResolve){e.preventDefault();settleConfirmation(false)}});
+
 async function register(){try{let r=await api('register',{name:E('name').value,code:E('code').value.trim().toLowerCase(),ownerPassword:E('ownerPass').value,employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});enter(r);if(r.recoveryCode){showCode('ownerRecoveryResult',r.recoveryCode);E('owner').classList.remove('hide');E('owner').scrollIntoView({behavior:'smooth',block:'start'})}}catch(e){E('error').textContent=e.message}}
 async function login(){try{enter(await api('login',{code:E('signinCode').value.trim().toLowerCase(),role:E('role').value,password:E('pass').value}))}catch(e){E('error').textContent=e.message}}
-function enter(r){token=r.token||token;sessionStorage.setItem('pvz2token',token);s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());E('mobileDays').dataset.week='';E('mobileDays').innerHTML='';if(s.role==='owner'){fill();renderMemberAccess()}E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
+function enter(r){
+ token=r.token||token;writeAppToken(token);E('pass').value='';
+ if(r.mustChangePassword){
+  s=null;
+  E('pointPicker').classList.add('hide');E('auth').classList.add('hide');E('app').classList.add('hide');
+  E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';E('firstPasswordError').textContent='';
+  E('firstPasswordEmployee').textContent=r.employee||'';
+  E('firstPasswordOverlay').classList.remove('hide');E('firstPasswordNew').focus();
+  return;
+ }
+ E('firstPasswordOverlay').classList.add('hide');
+ s=normalize(r.company);E('auth').classList.add('hide');E('app').classList.remove('hide');document.body.classList.add('beta-in-app');E('week').value=monday(iso(new Date()));E('date').value=iso(new Date());E('mobileDays').dataset.week='';E('mobileDays').innerHTML='';if(s.role==='owner'){fill();renderMemberAccess()}E('owner').classList.add('hide');closeAssignment();draw();syncLabel('Синхронизировано · '+syncClock(),'ok')}
 function fill(){editVersion=s.version;E('editName').value=s.name;E('editPositions').value=s.config.positions;E('editOpens').value=s.config.opens;E('editCloses').value=s.config.closes;E('editNames').value=s.employees.join('\n');E('payMode').value=s.config.payrollMode||'weekly';renderJobRoles();dayUI('editDays',s.config.days)}
 function syncClock(){return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function syncLabel(message,state='ok'){
@@ -772,7 +813,7 @@ function renderRoleSelect(reset=false){
  if(!roles.length){
   sel.innerHTML='<option value="">Должности ещё не добавлены</option>';
   sel.disabled=true;sel.dataset.employee=who;sel.dataset.mapped='';
-  showRoleRate();return;
+  showRoleRate(reset);return;
  }
  sel.disabled=allowed.length===0;
  sel.innerHTML='<option value="">Выберите должность</option>'+allowed.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
@@ -780,12 +821,12 @@ function renderRoleSelect(reset=false){
  sel.value=allowed.some(r=>r.id===wanted)?wanted:'';
  sel.dataset.employee=who;
  sel.dataset.mapped=mapped;
- showRoleRate();
+ showRoleRate(reset);
 }
-function showRoleRate(){
+function showRoleRate(clearError=true){
  if(!s)return;
  const r=(s.jobRoles||[]).find(x=>x.id===E('jobRole').value);
- E('assignmentError').textContent='';
+ if(clearError)E('assignmentError').textContent='';
  E('roleRatePreview').textContent=r?(s.role==='owner'?'Ставки должности: '+rub(r.shift)+' за смену, '+rub(r.half??r.shift/2)+' за полсмены или '+rub(r.hour)+' за час.':'Должность: '+r.name):((s.jobRoles||[]).length?'Выберите должность.':'Владелец ещё не добавил должности. Для старых точек пока действует общая ставка.');
 }
 
@@ -951,7 +992,7 @@ function renderMonthlyPayroll(){
 async function monthlyAction(op,encoded,amount=null){
  if(mutateBusy||!s||s.role!=='owner')return;
  const name=decodeURIComponent(encoded);
- if(op!=='advance'&&!confirm('Подтвердить действие для '+name+'?'))return;
+ if(op!=='advance'&&!await appConfirm('Подтвердить действие для '+name+'?'))return;
  mutateBusy=true;
  try{
   const response=await api('payrollMonthly',{operation:op,period:E('payrollMonth').value||iso(new Date()).slice(0,7),employee:name,amount,expectedVersion:s.version});
@@ -962,11 +1003,11 @@ async function monthlyAction(op,encoded,amount=null){
 }
 function saveMonthlyFine(input){
  const value=Number(input.value);
- if(!Number.isFinite(value)||Math.abs(value)>1000000||Math.abs(value*100-Math.round(value*100))>.001){alert('Штраф или возврат от −1 000 000 до 1 000 000 ₽');renderMonthlyPayroll();return}
+ if(!Number.isFinite(value)||Math.abs(value)>1000000||Math.abs(value*100-Math.round(value*100))>.001){appNotice('Штраф или возврат от −1 000 000 до 1 000 000 ₽');renderMonthlyPayroll();return}
  monthlyAction('fine',input.dataset.employee,value);
 }
 function saveAdvance(input){
- const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>1000000||Math.abs(value*100-Math.round(value*100))>.001){alert('Введите сумму аванса до 1 000 000 ₽');renderMonthlyPayroll();return}
+ const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>1000000||Math.abs(value*100-Math.round(value*100))>.001){appNotice('Введите сумму аванса до 1 000 000 ₽');renderMonthlyPayroll();return}
  monthlyAction('advance',input.dataset.employee,value);
 }
 function exportMonthlyPayroll(){
@@ -1028,17 +1069,17 @@ function previewPayrollFine(input){
 function payrollFine(input){
  const amount=Number(input.value),name=decodeURIComponent(input.dataset.employee);
  if(!Number.isFinite(amount)||Math.abs(amount)>1000000||Math.abs(amount*100-Math.round(amount*100))>.000001){
-  alert('Введите сумму от -1 000 000 до 1 000 000 ₽');renderPayroll();return;
+  appNotice('Введите сумму от -1 000 000 до 1 000 000 ₽');renderPayroll();return;
  }
  payrollAction('fine',name,amount);
 }
-function payrollMark(operation,encoded){
+async function payrollMark(operation,encoded){
  const name=decodeURIComponent(encoded);
- if(confirm(operation==='mark'?'Подтвердить выплату сотруднику '+name+'?':'Снять отметку выплаты сотруднику '+name+'?'))payrollAction(operation,name);
+ if(await appConfirm(operation==='mark'?'Подтвердить выплату сотруднику '+name+'?':'Снять отметку выплаты сотруднику '+name+'?'))payrollAction(operation,name);
 }
 async function mutate(action,p){
  if(!s||mutateBusy)return;
- mutateBusy=true;let needSync=false;
+ mutateBusy=true;let needSync=false,assignmentMessage='';
  const session=token;
  try{
   const r=await api(action,{...p,expectedVersion:s.version});
@@ -1053,23 +1094,38 @@ async function mutate(action,p){
   const message=String(e.message||'Ошибка сохранения');
   needSync=/изменил|изменился|изменены|занято|назначен|Обновите страницу|не найдена/i.test(message);
   E('status').textContent='Не сохранено: '+message+(needSync?' Загружаем свежий график.':'');
-  if(action==='assign')E('assignmentError').textContent=message;
+  if(action==='assign'){assignmentMessage=message;showAssignmentError(message)}
  }finally{
   mutateBusy=false;
   if(needSync&&session===token)await syncNow(true);
+  if(assignmentMessage&&session===token&&!E('assignmentOverlay').classList.contains('hide'))showAssignmentError(assignmentMessage);
  }
 }
-async function assign(){
- if(!s||mutateBusy||!['owner','admin'].includes(s.role))return;
- const role=E('jobRole').value;
+function showAssignmentError(message){
+ const output=E('assignmentError');output.textContent=message;
+ output.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+async function saveAssignment(){
+ const button=E('assignmentSave');
+ if(button.disabled)return;
+ if(!s||!token){showAssignmentError('Сеанс завершён. Войдите снова.');return}
+ if(!['owner','admin'].includes(s.role)){showAssignmentError('Назначать смены может владелец или администратор.');return}
+ if(mutateBusy){showAssignmentError('Сохраняется другое изменение. Дождитесь завершения и нажмите ещё раз.');return}
+ const role=E('jobRole').value,employeeIndex=Number(E('employee').value),position=Number(E('position').value);
+ const date=E('date').value,start=E('start').value,end=E('end').value,kind=E('kind').value;
+ if(!date||!start||!end||!Number.isInteger(employeeIndex)||!s.employees[employeeIndex]||!Number.isInteger(position)||position<0||position>=s.config.positions){showAssignmentError('Укажите дату, место, сотрудника и время смены.');return}
+ if(start>=end||start<s.config.opens||end>s.config.closes){showAssignmentError('Время смены должно быть в пределах '+s.config.opens+'–'+s.config.closes+', окончание — позже начала.');return}
  if(s.jobRoles.length&&!role){
-  const who=s.employees[+E('employee').value]||'';
-  E('assignmentError').textContent=s.role==='admin'?'Не определена должность для «'+who+'». Владелец должен назначить сотруднику должность в настройках точки.':'Выберите должность для сотрудника';
+  const who=s.employees[employeeIndex];
+  showAssignmentError(s.role==='admin'?'Не определена должность для «'+who+'». Владелец должен назначить сотруднику должность в настройках точки.':'Выберите должность для сотрудника');
   return;
  }
- await mutate('assign',{date:E('date').value,position:+E('position').value,employeeIndex:+E('employee').value,kind:E('kind').value,start:E('start').value,end:E('end').value,jobRoleId:role});
+ E('assignmentError').textContent='Сохраняем назначение…';
+ button.disabled=true;button.textContent='Сохраняем…';
+ try{await mutate('assign',{date,position,employeeIndex,kind,start,end,jobRoleId:role})}
+ finally{button.disabled=false;button.textContent='Сохранить назначение'}
 }
-function removeShift(id){if(!s||!['owner','admin'].includes(s.role))return;if(confirm('Снять сотрудника со смены?'))mutate('remove',{id})}
+async function removeShift(id){if(!s||!['owner','admin'].includes(s.role))return;if(await appConfirm('Снять сотрудника со смены?'))mutate('remove',{id})}
 function settings(){
  if(editVersion!==s.version){E('status').textContent='Данные точки изменились. Закройте настройки и откройте снова.';return}
  try{
@@ -1082,10 +1138,13 @@ function settings(){
  }catch(e){E('status').textContent=e.message}
 }
 function paid(n){mutate('paid',{week:monday(E('week').value),employee:decodeURIComponent(n)})}
-function logout(){closeAssignment();let old=token;token='';sessionStorage.removeItem('pvz2token');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
+function logout(){settleConfirmation(false);clearMemberCredentials();E('pointPicker').classList.add('hide');E('firstPasswordOverlay').classList.add('hide');E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';closeAssignment();let old=token;token='';writeAppToken('');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
 function togglePassword(id,btn){const x=E(id),shown=x.type==='password';x.type=shown?'text':'password';btn.textContent=shown?'◌':'◉';btn.setAttribute('aria-label',shown?'Скрыть пароль':'Показать пароль')}
 function showCode(id,code){const box=E(id);box.classList.remove('hide');box.innerHTML='<b>Сохраните новый резервный код:</b><div class="recovery-code">'+esc(code)+'</div><p class="formnote">Код показан только сейчас. Храните его отдельно от пароля — без него восстановить доступ нельзя.</p><button onclick="copyRecovery(\''+code+'\')">Скопировать код</button>'}
-function copyRecovery(code){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(code).then(()=>alert('Код скопирован')).catch(()=>prompt('Скопируйте код',code));else prompt('Скопируйте код',code)}
+function copyRecovery(code){
+ const fallback=()=>{const box=E('ownerRecoveryResult');let field=box.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;field.setAttribute('aria-label','Резервный код для ручного копирования');box.append(field)}field.value=code;field.focus();field.select();appNotice('Скопируйте выделенный резервный код вручную.')};
+ if(navigator.clipboard&&window.isSecureContext)Promise.resolve().then(()=>navigator.clipboard.writeText(code)).then(()=>appNotice('Код скопирован')).catch(fallback);else fallback();
+}
 function showRecovery(show){E('recoveryForm').classList.toggle('hide',!show);E('signin').classList.toggle('hide',show);E('reg').classList.add('hide');E('error').textContent='';E('recoveryResult').classList.add('hide');if(show)E('recoverCompany').value=E('signinCode').value}
 async function recoverPassword(){try{const code=E('recoverCompany').value.trim().toLowerCase();const r=await api('resetPassword',{code,recoveryCode:E('recoverCode').value,newPassword:E('recoverPassword').value});showCode('recoveryResult',r.recoveryCode);E('error').textContent='Пароль владельца изменён. Сохраните новый резервный код, затем войдите с новым паролем.';E('recoverCode').value='';E('recoverPassword').value=''}catch(e){E('error').textContent=e.message}}
 async function changePasswords(){
@@ -1099,17 +1158,17 @@ async function changePasswords(){
   E('securityStatus').textContent='Пароль email-аккаунта владельца обновлён.';
  }catch(e){E('securityStatus').textContent='Не удалось обновить пароль: '+authErrorText(e)}
 }
-async function rotateRecovery(){if(!confirm('Создать новый резервный код? Предыдущий перестанет работать.'))return;try{const r=await api('security',{rotateRecovery:true,expectedVersion:s.version});s=normalize(r.company);showCode('ownerRecoveryResult',r.recoveryCode);E('securityStatus').textContent='Резервный код обновлён. Сохраните его в надёжном месте.'}catch(e){E('securityStatus').textContent=e.message}}
+async function rotateRecovery(){if(!await appConfirm('Создать новый резервный код? Предыдущий перестанет работать.'))return;try{const r=await api('security',{rotateRecovery:true,expectedVersion:s.version});s=normalize(r.company);showCode('ownerRecoveryResult',r.recoveryCode);E('securityStatus').textContent='Резервный код обновлён. Сохраните его в надёжном месте.'}catch(e){E('securityStatus').textContent=e.message}}
 
 const sb=window.supabase?.createClient('https://vyavhynnybsinkiievbu.supabase.co',KEY,{auth:{persistSession:true,detectSessionInUrl:true}});
 let addingPoint=false;
 async function authSession(){if(!sb)throw Error('Не загрузился модуль авторизации');const {data:{session}}=await sb.auth.getSession();if(!session)throw Error('Войдите по email');return session}
 async function emailCall(action,p={}){const a=await authSession();return api(action,{authToken:a.access_token,...p})}
 async function signupEmail(){try{if(!sb)throw Error('Не загрузился модуль авторизации');const {error}=await sb.auth.signUp({email:E('ownerEmail').value.trim().toLowerCase(),password:E('accountPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;E('emailStatus').textContent='Проверьте почту и перейдите по ссылке подтверждения. Затем войдите в аккаунт.'}catch(e){E('emailStatus').textContent=e.message}}
-async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth').classList.add('hide');E('app').classList.add('hide');E('pointPicker').classList.remove('hide');document.body.classList.remove('beta-in-app');E('pointsList').innerHTML=q.points.map(p=>'<button onclick="enterPoint(\''+p.id+'\')">'+esc(p.name)+' · '+esc(p.code)+'</button>').join('')||'<p class="muted">Пока нет точек. Создайте первую.</p>'}catch(e){alert(e.message)}}
-async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){alert(e.message)}}
+async function loadPoints(){try{const q=await emailCall('emailPoints');E('auth').classList.add('hide');E('app').classList.add('hide');E('pointPicker').classList.remove('hide');document.body.classList.remove('beta-in-app');E('pointsList').innerHTML=q.points.map(p=>'<button onclick="enterPoint(\''+p.id+'\')">'+esc(p.name)+' · '+esc(p.code)+'</button>').join('')||'<p class="muted">Пока нет точек. Создайте первую.</p>'}catch(e){appNotice(e.message)}}
+async function enterPoint(id){try{const q=await emailCall('emailEnter',{pointId:id});enter(q);E('pointPicker').classList.add('hide');E('backPoints').classList.remove('hide')}catch(e){appNotice(e.message)}}
 function showPointSetup(){addingPoint=true;E('pointPicker').classList.add('hide');E('auth').classList.remove('hide');E('authTabs').classList.add('hide');E('emailSignup').classList.add('hide');E('reg').classList.remove('hide');E('signin').classList.add('hide')}
-async function accountLogout(){if(sb)await sb.auth.signOut();token='';s=null;sessionStorage.removeItem('pvz2token');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
+async function accountLogout(){settleConfirmation(false);clearMemberCredentials();E('firstPasswordOverlay').classList.add('hide');E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';if(sb)await sb.auth.signOut();token='';s=null;writeAppToken('');E('pointPicker').classList.add('hide');E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');addingPoint=false;mode(true)}
 async function register(){try{const q=await emailCall('emailCreate',{name:E('name').value,code:E('code').value.trim().toLowerCase(),employees:list('names'),config:{positions:+E('positions').value,opens:E('opens').value,closes:E('closes').value,days:days('days'),payrollMode:E('createPayMode').value},...createRolePayload()});addingPoint=false;await enterPoint(q.point.id)}catch(e){E('error').textContent=e.message}}
 function authErrorText(e){const code=String(e?.code||''),message=String(e?.message||'Ошибка авторизации');
  if(code==='invalid_credentials'||/Invalid login credentials/i.test(message))return 'Неверный email или пароль. Проверьте сохранённый пароль в «Паролях» телефона или восстановите доступ по email.';
@@ -1210,18 +1269,35 @@ async function renderMemberAccess(){
   if(!s||s.role!=='owner')return;
   const known=new Map((r.members||[]).map(m=>[m.employee_name,m]));
   root.innerHTML=s.employees.map(name=>{
-   const member=known.get(name),status=member?(member.active?'Доступ активен · ':'Доступ отключён · ')+'Логин для входа: '+member.login:'Личный логин ещё не создан — выдайте доступ';
+   const member=known.get(name),suggested=member?.login||memberLoginSuggestion(name),status=member?(member.active?'Доступ активен · ':'Доступ отключён · ')+'Логин для входа: '+member.login+(member.must_change_password?' · Ожидает смены временного пароля':''):'Личный логин ещё не создан — выдайте доступ';
    return '<div class="mapping-row" style="grid-template-columns:1fr;gap:8px">'+
     '<b>'+esc(name)+'</b><small style="font-size:13px;color:#0F2D3D;overflow-wrap:anywhere">'+esc(status)+'</small><div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">'+
+    '<label style="width:100%">Логин для входа<input data-member-login data-employee="'+esc(name)+'" value="'+esc(suggested)+'" data-default="'+esc(suggested)+'" autocomplete="off" autocapitalize="none" spellcheck="false" minlength="3" maxlength="40" aria-label="Логин '+esc(name)+'"></label>'+
     '<select data-employee="'+esc(name)+'" aria-label="Права '+esc(name)+'" style="width:auto;min-width:160px">'+
     '<option value="staff" '+(!member||member.role==='staff'?'selected':'')+'>Сотрудник</option>'+
     '<option value="admin" '+(member?.role==='admin'?'selected':'')+'>Администратор</option></select>'+
-    '<button type="button" class="small" data-employee="'+esc(name)+'" onclick="issueMember(this)">'+(member?'Новый пароль → показать':'Выдать логин и пароль')+'</button>'+
+    '<button type="button" class="small" data-employee="'+esc(name)+'" data-login="'+esc(member?.login||'')+'" onclick="issueMember(this)">'+(member?'Новый пароль → показать':'Выдать логин и пароль')+'</button>'+
     (member?'<button type="button" class="small" data-employee="'+esc(name)+'" onclick="setMemberRole(this)">Сохранить роль</button>':'')+
     (member?.active?'<button type="button" class="small" data-employee="'+esc(name)+'" onclick="disableMember(this)">Отключить</button>':'')+
     '</div></div>';
   }).join('');
  }catch(e){root.textContent='Не удалось загрузить доступы: '+e.message}
+}
+function memberLoginSuggestion(name){
+ const translit={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+ const value=Array.from(name.toLowerCase().normalize('NFKC')).map(c=>translit[c]??(/[a-z0-9]/.test(c)?c:'.')).join('').replace(/\.+/g,'.').replace(/^\.+|\.+$/g,'').slice(0,36).replace(/\.+$/,'');
+ return value.length>=3?value:'user.'+(value||'member');
+}
+async function saveFirstPassword(){
+ const btn=E('firstPasswordSave'),output=E('firstPasswordError'),p=E('firstPasswordNew').value,confirmation=E('firstPasswordRepeat').value;
+ if(btn.disabled)return;
+ output.textContent='';
+ if(p.length<10||p.length>128){output.textContent='Пароль должен содержать от 10 до 128 символов';return}
+ if(p!==confirmation){output.textContent='Пароли не совпадают';return}
+ btn.disabled=true;btn.textContent='Сохраняем…';
+ try{const response=await api('memberChangePassword',{newPassword:p});E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';enter(response)}
+ catch(e){output.textContent=String(e.message||e)}
+ finally{btn.disabled=false;btn.textContent='Сохранить и войти'}
 }
 function showMemberCredentials(employee,credentials){
  if(!credentials||typeof credentials.login!=='string'||!credentials.login||typeof credentials.password!=='string'||!credentials.password)throw Error('Сервер не вернул логин или новый пароль. Проверьте доступ и обратитесь в поддержку.');
@@ -1231,32 +1307,42 @@ function showMemberCredentials(employee,credentials){
  E('memberCredentialLogin').value=credentials.login;
  E('memberCredentialPassword').value=credentials.password;
  E('memberCredentialCopyStatus').textContent='';
+ E('memberManualCopy').classList.add('hide');E('memberManualCopyText').value='';
  overlay.classList.remove('hide');
  document.body.classList.add('member-credentials-open');
  E('copyAllMemberCredentials').focus({preventScroll:true});
 }
-function closeMemberCredentials(){
+async function closeMemberCredentials(){
  const overlay=E('memberCredentialsOverlay');
  if(!overlay||overlay.classList.contains('hide'))return;
- if(!confirm('Вы уже сохранили данные для входа? После закрытия новый пароль нельзя будет посмотреть снова.'))return;
- overlay.classList.add('hide');
+ if(!await appConfirm('Вы уже сохранили данные для входа? После закрытия новый пароль нельзя будет посмотреть снова.'))return;
+ clearMemberCredentials();
+}
+function clearMemberCredentials(){
+ E('memberCredentialsOverlay').classList.add('hide');
  document.body.classList.remove('member-credentials-open');
- for(const id of ['memberCredentialPoint','memberCredentialLogin','memberCredentialPassword'])E(id).value='';
+ for(const id of ['memberCredentialPoint','memberCredentialLogin','memberCredentialPassword','memberManualCopyText'])E(id).value='';
+ E('memberManualCopy').classList.add('hide');
  E('memberCredentialsName').textContent='';
  E('memberCredentialCopyStatus').textContent='';
 }
 function memberCredentialsText(){
+ const link=new URL(location.origin+location.pathname);link.searchParams.set('role','staff');link.searchParams.set('point',E('memberCredentialPoint').value);link.searchParams.set('login',E('memberCredentialLogin').value);
  return 'По графику — вход сотрудника\n'+
-  'Адрес: '+location.origin+location.pathname+'\n'+
+  'Адрес: '+link.toString()+'\n'+
   'Код точки: '+E('memberCredentialPoint').value+'\n'+
   'Логин: '+E('memberCredentialLogin').value+'\n'+
   'Пароль: '+E('memberCredentialPassword').value;
 }
 function copyMemberText(value){
  const result=E('memberCredentialCopyStatus');
- const fallback=()=>prompt('Скопируйте данные для входа:',value);
+ const fallback=()=>{
+  E('memberManualCopy').classList.remove('hide');
+  const field=E('memberManualCopyText');field.value=value;field.focus();field.select();
+  result.textContent='Автоматическое копирование недоступно. Скопируйте выделенный текст вручную.';
+ };
  if(navigator.clipboard&&window.isSecureContext){
-  navigator.clipboard.writeText(value)
+  Promise.resolve().then(()=>navigator.clipboard.writeText(value))
    .then(()=>result.textContent='✓ Скопировано в буфер обмена')
    .catch(fallback);
  }else fallback();
@@ -1267,13 +1353,16 @@ async function issueMember(button){
  if(!s||s.role!=='owner'||button.disabled)return;
  const name=button.dataset.employee;
  const sel=[...E('memberAccessRows').querySelectorAll('select')].find(x=>x.dataset.employee===name);
- if(!confirm('Создать новый пароль для «'+name+'»? Старый пароль перестанет работать. Новый пароль сразу появится в отдельном окне.'))return;
+ if(!await appConfirm('Создать новый пароль для «'+name+'»? Старый пароль перестанет работать. Новый пароль сразу появится в отдельном окне.'))return;
  button.disabled=true;
  const original=button.textContent;
  button.textContent='Создаём пароль…';
  E('memberAccessStatus').textContent='Выдаём личный доступ сотруднику '+name+'…';
  try{
-  const r=await api('memberIssue',{employee:name,memberRole:sel?.value||'staff'});
+  const field=[...E('memberAccessRows').querySelectorAll('[data-member-login]')].find(x=>x.dataset.employee===name);
+  const cleaned=(field?.value||'').trim().toLowerCase();
+  if(!/^[a-z0-9._-]{3,40}$/.test(cleaned))throw Error('Логин: 3–40 латинских букв, цифр, точек, дефисов или подчёркиваний');
+  const r=await api('memberIssue',{employee:name,memberRole:sel?.value||'staff',login:!button.dataset.login&&cleaned===field?.dataset.default?'':cleaned});
   E('memberAccessStatus').textContent='Новый пароль создан. Данные для входа показаны в отдельном окне.';
   showMemberCredentials(name,r.credentials);
   renderMemberAccess().catch(()=>{});
@@ -1301,7 +1390,7 @@ async function setMemberRole(button){
 async function disableMember(button){
  if(!s||s.role!=='owner')return;
  const name=button.dataset.employee;
- if(!confirm('Отключить вход сотрудника '+name+'?'))return;
+ if(!await appConfirm('Отключить вход сотрудника '+name+'?'))return;
  button.disabled=true;
  try{
   await api('memberDisable',{employee:name});
@@ -1310,15 +1399,16 @@ async function disableMember(button){
  }catch(e){E('memberAccessStatus').textContent=e.message}
  finally{button.disabled=false}
 }
+for(const id of ['firstPasswordNew','firstPasswordRepeat'])E(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveFirstPassword()}});
 const HELP_TOPICS=[
  {q:"Как начать работу владельцу?",a:"1. Зарегистрируйте аккаунт владельца по электронной почте и подтвердите email из письма.\n2. Войдите как владелец и откройте «Мои точки».\n3. Создайте точку: укажите график, число мест в смене, сотрудников и ставки.\n4. Выберите её из списка и назначайте сотрудников в календаре."},
- {q:"Как добавить вторую точку?",a:"Войдите по email владельца, нажмите «Мои точки» и выберите «Добавить точку». У каждой точки свой код и настройки. Сотрудники входят по коду своей точки и паролю сотрудников."},
+ {q:"Как добавить вторую точку?",a:"Войдите по email владельца, нажмите «Мои точки» и выберите «Добавить точку». У каждой точки свой код и настройки. Сотрудники входят по коду точки, личному логину и паролю."},
  {q:"Как назначить сотрудника на смену?",a:"В разделе «График» найдите свободное место и нажмите «+ Назначить». Выберите сотрудника, вид оплаты, начало и окончание работы, затем сохраните. На занятом месте будет показано имя сотрудника."},
  {q:"Как отменить назначение?",a:"Владелец открывает нужную неделю и нажимает «Снять запись» возле занятой смены. Сотрудники не могут снимать чужие назначения: для изменения обратитесь к владельцу."},
  {q:"Как изменить сотрудников и ставки?",a:"Войдите как владелец. Откройте «Настройки точки» → измените список сотрудников, рабочие дни, число мест и ставки → нажмите «Сохранить настройки». Ранее назначенные смены отображаются в графике."},
  {q:"Как считаются начисления и выплаты?",a:"Выплаты доступны владельцу в разделе «Еженедельные выплаты». При назначении смены выбирается ставка за смену или почасовая. Начисление попадает в выбранную неделю. После фактической оплаты нажмите «Отметить выплату». Перед выплатой проверьте часы и суммы."},
- {q:"Как сотрудники входят в приложение?",a:"На экране входа выберите роль «Сотрудник». Введите код своей точки, который сообщил владелец, и пароль сотрудников. У каждого сотрудника свой личный логин и пароль. Администратор назначает смены, обычный сотрудник просматривает график и только свои начисления."},
- {q:"Не могу войти или забыл пароль",a:"Владелец входит по email и паролю аккаунта. Если забыли пароль, нажмите «Забыли пароль владельца?» — письмо со ссылкой восстановления придёт на email.\nСотруднику нужны код точки и пароль сотрудников. Если не получается, запросите их у владельца. Никогда не отправляйте пароли в поддержку."},
+ {q:"Как сотрудники входят в приложение?",a:"На экране входа выберите роль «Сотрудник». Введите код точки, личный логин и временный пароль, которые сообщил владелец. При первом входе создайте собственный пароль. У каждого сотрудника свой личный логин и пароль. Администратор назначает смены, обычный сотрудник просматривает график и только свои начисления."},
+ {q:"Не могу войти или забыл пароль",a:"Владелец входит по email и паролю аккаунта. Если забыли пароль, нажмите «Забыли пароль владельца?» — письмо со ссылкой восстановления придёт на email.\nСотруднику нужны код точки, личный логин и пароль. Если не получается, запросите их у владельца. Никогда не отправляйте пароли в поддержку."},
  {q:"Почему график не обновился на другом телефоне?",a:"Все устройства одной точки используют общую базу. При открытом приложении проверка выполняется примерно каждые 20 секунд, а также после возвращения во вкладку. Нажмите «↻ Обновить», если хотите проверить немедленно. Убедитесь, что оба устройства вошли в одну точку."},
  {q:"Что делать, если появилась ошибка?",a:"Сначала проверьте интернет и нажмите «↻ Обновить». Если ошибка повторяется, откройте «Написать в поддержку», выберите «Ошибка в работе», укажите действие и текст ошибки. Не присылайте пароли, резервные коды или личные данные сотрудников."},
  {q:"Как предложить улучшение во время бета-теста?",a:"Откройте вкладку «Написать в поддержку», выберите «Предложение» и опишите, какую задачу хотите решать удобнее. Каждое обращение сохраняется для команды проекта; указанный email нужен для обратной связи."}
@@ -1372,16 +1462,27 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!E('helpOverlay').c
 
 E('employee').addEventListener('change',()=>renderRoleSelect(true));E('kind').addEventListener('change',showRoleRate);
 initAuthRecovery();
+const staffLoginLink=new URLSearchParams(location.search).get('role')==='staff';
+if(staffLoginLink){const params=new URLSearchParams(location.search);E('role').value='staff';E('signinCode').value=(params.get('point')||'').slice(0,32);E('memberLoginName').value=(params.get('login')||'').slice(0,40)}
 dayUI('days',[0,1,2,3,4,5,6]);namesFill();addCreateJobRole();mode(true);E('role').onchange=()=>mode(true);
-if(sb)sb.auth.getSession().then(({data,error})=>{
+async function restoreAppSession(){
+ if(!token)return false;
+ try{enter(await api('load'));return true}catch(e){
+  if(e.code==='PASSWORD_CHANGE_REQUIRED'){enter({mustChangePassword:true,employee:e.employee});return true}
+  if(e.status===401||e.status===403){writeAppToken('');token=''}else{E('error').textContent=e.message;return true}
+  return false;
+ }
+}
+if(sb)sb.auth.getSession().then(async({data,error})=>{
  if(recoveryMode)return showRecoveryPasswordForm();
+ if(await restoreAppSession())return;
  if(error){E('error').textContent=authErrorText(error);return}
- if(data.session)loadPoints();
-});else if(token)api('load').then(enter).catch(logout);
+ if(data.session&&!staffLoginLink){loadPoints();return}
+});else restoreAppSession();
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-14-personal-roles-production-1';
+const CURRENT_BUILD='2026-10-14-personal-passwords-production-2';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
