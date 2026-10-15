@@ -6,6 +6,21 @@
 <section id="dashboard" class="hidden"><div class="intro"><div><div class="eyebrow">ОБЗОР ВСЕГО СЕРВИСА</div><h1>Как растёт «По графику»</h1><p class="muted">Пользователи, команды и использование приложения.</p></div><a class="button" href="/">← В приложение</a></div>
 <div class="tools"><label for="month">Период</label><input id="month" type="month" min="2020-01" max="2100-12"><button id="refresh" class="primary">Обновить</button><button id="export">Скачать сводку</button><span id="updated" class="muted"></span></div>
 <div class="cards" id="metrics"></div><div class="notice" id="insight"></div>
+<section class="panel" id="promotion" aria-labelledby="promotionTitle">
+<div class="intro"><div><div class="eyebrow">PO-GRAFIKU.RU · РОССИЯ</div><h2 id="promotionTitle" style="margin-top:8px">Продвижение в поиске</h2></div><span class="pill quiet">Источники не подключены</span></div>
+<p class="muted">Средняя позиция сайта по выбранным запросам в Яндексе и Google. Регион: вся Россия.</p>
+<div class="table-scroll"><table><thead><tr><th>Поисковый запрос</th><th>Яндекс · ср. позиция</th><th>Google · ср. позиция</th><th>Динамика</th></tr></thead><tbody>
+<tr><td>график смен сотрудников</td><td>Нет данных</td><td>Нет данных</td><td>—</td></tr>
+<tr><td>учёт смен и выплат</td><td>Нет данных</td><td>Нет данных</td><td>—</td></tr>
+<tr><td>график сотрудников ПВЗ</td><td>Нет данных</td><td>Нет данных</td><td>—</td></tr>
+<tr><td>По графику</td><td>Нет данных</td><td>Нет данных</td><td>—</td></tr>
+</tbody></table></div>
+<div class="notice">Для отображения позиций, показов и переходов нужно подключить отчёты Яндекс Вебмастера и Google Search Console. «Нет данных» означает, что измерение ещё не получено; это не позиция за пределами выдачи.</div>
+<details style="margin-top:20px"><summary style="cursor:pointer;font-weight:650">Как подключить статистику</summary>
+<ol style="line-height:1.8;padding-left:22px"><li>Добавьте https://po-grafiku.ru/ в Яндекс Вебмастер и Google Search Console.</li><li>Подтвердите владение доменом. Если нужна DNS-запись или файл подтверждения, передайте полученные значения для настройки.</li><li>В отчёте по поисковым запросам выберите страну «Россия» и нужный период.</li><li>После настройки доступа к отчётам подключим загрузку реальной статистики в панель.</li></ol>
+<div class="tools"><a class="button" href="https://webmaster.yandex.ru/" target="_blank" rel="noopener noreferrer">Открыть Яндекс Вебмастер ↗</a><a class="button" href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer">Открыть Google Search Console ↗</a></div></details>
+<p class="footnote">Позиция усредняется по показам за период и может отличаться от результата ручной проверки. До подключения источников статистика и история изменений не собираются.</p>
+</section>
 <section class="panel"><h2>Новые аккаунты по дням</h2><p class="muted">Регистрации владельцев и действующих личных доступов сотрудников за выбранный месяц.</p><div id="chart" class="chart" role="img"></div></section>
 <section class="panel"><div class="intro"><div><h2>Все точки</h2><span class="muted" id="pointCount"></span></div><input id="search" type="search" placeholder="Название или ID точки" aria-label="Поиск точки"></div><div class="table-scroll"><table><thead><tr><th>Точка / ID</th><th>Сотрудники</th><th>Личные доступы</th><th>Последний вход</th></tr></thead><tbody id="points"></tbody></table></div><p class="footnote">Сотрудники считаются по спискам точек: один человек в двух точках учитывается дважды. Личные доступы — только действующие аккаунты сотрудников и администраторов. Тестовые точки также входят в сводку.</p></section>
 <p class="footnote">Активность определяется по созданным сеансам входа за последние 7 дней. После удаления или истечения сеансов история входов может быть неполной. Даты и суточная статистика — по Екатеринбургу. Панель доступна только владельцу сервиса и не изменяет данные точек.</p></section></main><script src="admin.js?v=2026-10-15-audience-only"></script></body></html>
