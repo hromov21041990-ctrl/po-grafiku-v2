@@ -429,7 +429,7 @@ body.member-credentials-open{overflow:hidden}
 <div class="page">
  <header class="topbar" aria-label="По графику">
   <div class="brand"><span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 52 52" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="9" width="34" height="34" rx="8" fill="#0F2D3D"/><rect x="7" y="16" width="34" height="7" fill="#22C998"/><path d="M16 7v7M33 7v7" stroke="#22C998" stroke-width="5" stroke-linecap="round"/><rect x="14" y="27" width="6" height="6" rx="1.5" fill="#22C998"/><rect x="25" y="27" width="6" height="6" rx="1.5" fill="#22C998"/><rect x="14" y="36" width="6" height="5" rx="1.5" fill="#22C998"/><circle cx="36" cy="37" r="12" fill="#22C998" stroke="white" stroke-width="2"/><path d="m30.5 37 4 4 7-8" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><div class="brandname">По графику</div><span class="brandhint">Смены и выплаты без лишних хлопот</span></div></div>
-  <div class="header-tools"><button type="button" class="help-top-link" aria-label="Помощник и поддержка" onclick="openHelp('guide')">❔ Помощник и поддержка</button><span class="topbadge">Версия 2.0 · Бета</span></div>
+  <div class="header-tools"><a id="serviceAdminLink" class="help-top-link hide" href="admin.html" style="text-decoration:none">▥ Панель сервиса</a><button type="button" class="help-top-link" aria-label="Помощник и поддержка" onclick="openHelp('guide')">❔ Помощник и поддержка</button><span class="topbadge">Версия 2.0 · Бета</span></div>
  </header>
  <div id="auth" class="auth-layout">
   <div class="auth-story">
@@ -1482,7 +1482,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-14-auto-point-id-1';
+const CURRENT_BUILD='2026-10-15-service-dashboard-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
@@ -1507,4 +1507,4 @@ function updateAppNow(){
 }
 window.addEventListener('pageshow',()=>checkAppUpdate(true));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkAppUpdate()});
-</script></body></html>
+</script><script src="admin-link.js"></script></body></html>
