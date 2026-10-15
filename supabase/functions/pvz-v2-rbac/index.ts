@@ -47,7 +47,7 @@ function publicCompany(c:any,role:string,person:string|null=null){
   }
  }
  return {
-  name:c.name,code:c.code,employees:c.employees,config:c.config,
+  name:c.name,code:c.code,publicCode:c.public_code||c.code,employees:c.employees,config:c.config,
   rates:owner?c.rates:{},schedule,
   payments:owner?c.payments:ownPayments,
   jobRoles:owner?(c.job_roles||[]):(c.job_roles||[]).map((r:any)=>({id:r.id,name:r.name})),
@@ -75,7 +75,12 @@ async function createSession(c:any,role:string,member:any=null){
  return {token,company:publicCompany(c,role,member?.employee_name||null)};
 }
 const emailUser=async(v:unknown)=>{if(typeof v!=="string"||v.length<40||v.length>6000)return null;const {data,error}=await db.auth.getUser(v);return error||!data.user?.email_confirmed_at?null:data.user;};
-Deno.serve(async req=>{const origin=req.headers.get("origin")||"";if(!origins.has(origin))return resp(origin,403,{error:"Недоступный источник"});if(req.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-headers":"authorization,apikey,content-type","access-control-allow-methods":"POST,OPTIONS"}});if(req.method!=="POST")return resp(origin,405,{error:"Метод недоступен"});if(req.headers.get("apikey")!==KEY)return resp(origin,401,{error:"Неверный ключ приложения"});let body:any;try{const raw=await req.text();if(raw.length>250000)return resp(origin,413,{error:"Слишком большой запрос"});body=JSON.parse(raw);if(!asObj(body))throw Error()}catch{return resp(origin,400,{error:"Неверный запрос"})}
+Deno.serve(async req=>{const origin=req.headers.get("origin")||"";if(!origins.has(origin))return resp(origin,403,{error:"Недоступный источник"});if(req.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-headers":"authorization,apikey,content-type","access-control-allow-methods":"POST,OPTIONS"}});if(req.method!=="POST")return resp(origin,405,{error:"Метод недоступен"});let body:any;try{const raw=await req.text();if(raw.length>250000)return resp(origin,413,{error:"Слишком большой запрос"});body=JSON.parse(raw);if(!asObj(body))throw Error()}catch{return resp(origin,400,{error:"Неверный запрос"})}
+// A CORS-safelisted text body avoids stalled mobile preflights. Credentials
+// stay in the HTTPS body; the origin, app key and session checks still apply.
+const plainTransport=req.headers.get("content-type")?.split(";")[0].trim().toLowerCase()==="text/plain"&&asObj(body.transport)?body.transport:null;
+const requestKey=req.headers.get("apikey")??plainTransport?.apikey;
+if(requestKey!==KEY)return resp(origin,401,{error:"Неверный ключ приложения"});
 try {
 
 if(body.action==="memberLogin"){
@@ -84,9 +89,9 @@ if(body.action==="memberLogin"){
  const password=body.password;
  const denied=()=>resp(origin,401,{error:"Неверный логин или пароль"});
  if(!/^[a-z0-9-]{4,32}$/.test(code)||!/^[a-z0-9._-]{3,40}$/.test(username)||typeof password!=="string"||password.length>128)return denied();
- const {data:c}=await db.from("pvz2_companies").select("*").eq("code",code).maybeSingle();
+ const {data:c}=await db.from("pvz2_companies").select("*").or("code.eq."+code+",public_code.eq."+code).maybeSingle();
  if(!c)return denied();
- const keyHash=await digest(code+":"+username);
+ const keyHash=await digest((c.public_code||c.code)+":"+username);
  const now=Date.now();
  const {data:lim}=await db.from("pvz2_member_login_attempts").select("attempts,blocked_until,updated_at").eq("key_hash",keyHash).maybeSingle();
  if(lim?.blocked_until && Date.parse(lim.blocked_until)>now)return resp(origin,429,{error:"Слишком много попыток. Повторите вход через минуту."});
@@ -105,7 +110,7 @@ if(body.action==="memberLogin"){
 
 if(body.action==="emailPoints"){
  const u=await emailUser(body.authToken);if(!u)return resp(origin,401,{error:"Подтвердите почту и войдите"});
- const {data,error}=await db.from("pvz2_companies").select("id,code,name").eq("owner_auth_uid",u.id).order("created_at");
+ const {data,error}=await db.from("pvz2_companies").select("id,code,public_code,name").eq("owner_auth_uid",u.id).order("created_at");
  if(error)return resp(origin,500,{error:"Не удалось загрузить точки"});
  return resp(origin,200,{points:data||[]});
 }
@@ -117,17 +122,17 @@ if(body.action==="emailEnter"){
 }
 if(body.action==="emailCreate"){
  const u=await emailUser(body.authToken);if(!u)return resp(origin,401,{error:"Подтвердите почту"});
- const code=String(body.code||""),name=String(body.name||"").trim(),staff=rand(24);
- if(!/^[a-z0-9-]{4,32}$/.test(code)||name.length<2||name.length>100||!validPassword(staff)||!validEmployees(body.employees)||!validConfig(body.config)||!validRates(body.rates)||!validRoleState(body.jobRoles,body.employeeRoles,body.employees))return resp(origin,400,{error:"Проверьте настройки точки"});
+ const name=String(body.name||"").trim(),staff=rand(24);
+ if(name.length<2||name.length>100||!validPassword(staff)||!validEmployees(body.employees)||!validConfig(body.config)||!validRates(body.rates)||!validRoleState(body.jobRoles,body.employeeRoles,body.employees))return resp(origin,400,{error:"Проверьте настройки точки"});
  const a=rand(16),b=rand(16);
- const {data:c,error}=await db.from("pvz2_companies").insert({code,name,owner_auth_uid:u.id,owner_salt:a,owner_hash:await hash(rand(32),a),staff_salt:b,staff_hash:await hash(staff,b),employees:body.employees,config:body.config,rates:body.rates,job_roles:body.jobRoles||[],employee_roles:body.employeeRoles||{},schedule:[],payments:{}}).select("*").single();
+ const {data:c,error}=await db.from("pvz2_companies").insert({name,owner_auth_uid:u.id,owner_salt:a,owner_hash:await hash(rand(32),a),staff_salt:b,staff_hash:await hash(staff,b),employees:body.employees,config:body.config,rates:body.rates,job_roles:body.jobRoles||[],employee_roles:body.employeeRoles||{},schedule:[],payments:{}}).select("*").single();
  if(error)return resp(origin,error.code==="23505"?409:500,{error:error.code==="23505"?"Код точки уже занят":"Не удалось создать точку"});
- return resp(origin,200,{point:{id:c.id,code:c.code,name:c.name}});
+ return resp(origin,200,{point:{id:c.id,code:c.code,publicCode:c.public_code||c.code,name:c.name}});
 }
 if(body.action==="register"||body.action==="login"||body.action==="resetPassword"){
  return resp(origin,403,{error:"Используйте вход и регистрацию владельца по email или личный логин сотрудника."});
 }
-const bearer=req.headers.get("authorization")||"";if(!bearer.startsWith("Bearer ")||bearer.length>150)return resp(origin,401,{error:"Требуется вход"});const ownerHash=await digest(bearer.slice(7)),memberHash=await digest("pvz-v2-members:"+bearer.slice(7));const {data:s}=await db.from("pvz2_sessions").select("token_hash,company_id,role,member_id").in("token_hash",[ownerHash,memberHash]).gt("expires_at",new Date().toISOString()).maybeSingle();if(!s||(s.role!=="owner"&&s.token_hash!==memberHash))return resp(origin,401,{error:"Сеанс истёк. Войдите снова"});const tokenHash=s.token_hash;if(body.action==="logout"){await db.from("pvz2_sessions").delete().eq("token_hash",tokenHash);return resp(origin,200,{ok:true})}
+const bearer=req.headers.get("authorization")??(typeof plainTransport?.token==="string"?"Bearer "+plainTransport.token:"");if(!bearer.startsWith("Bearer ")||bearer.length>150)return resp(origin,401,{error:"Требуется вход"});const ownerHash=await digest(bearer.slice(7)),memberHash=await digest("pvz-v2-members:"+bearer.slice(7));const {data:s}=await db.from("pvz2_sessions").select("token_hash,company_id,role,member_id").in("token_hash",[ownerHash,memberHash]).gt("expires_at",new Date().toISOString()).maybeSingle();if(!s||(s.role!=="owner"&&s.token_hash!==memberHash))return resp(origin,401,{error:"Сеанс истёк. Войдите снова"});const tokenHash=s.token_hash;if(body.action==="logout"){await db.from("pvz2_sessions").delete().eq("token_hash",tokenHash);return resp(origin,200,{ok:true})}
 const {data:c,error:loadErr}=await db.from("pvz2_companies").select("*").eq("id",s.company_id).single();if(loadErr||!c)return resp(origin,404,{error:"Точка не найдена"});
 let member:any=null;
 if(s.role!=="owner"){

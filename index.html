@@ -632,13 +632,25 @@ const days=id=>[...E(id).querySelectorAll('input:checked')].map(x=>+x.value),day
 function mode(b){E('recoveryForm').classList.add('hide');E('recoveryResult').classList.add('hide');E('reg').classList.toggle('hide',b);E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent=''}function namesFill(){let old=list('names'),n=Math.min(50,Math.max(1,+E('count').value||1));E('names').value=Array.from({length:n},(_,i)=>old[i]||'Сотрудник '+(i+1)).join('\n');renderCreateEmployeeRoles()}
 function readAppToken(){try{return sessionStorage.getItem('pvz2token')||''}catch{return ''}}
 function writeAppToken(value){try{if(value)sessionStorage.setItem('pvz2token',value);else sessionStorage.removeItem('pvz2token')}catch{}}
+function requestApi(action,p={},session=token,signal){
+ // Keep credentials in the HTTPS body and avoid the mobile CORS preflight.
+ return fetch(API,{method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal,
+  headers:{'Content-Type':'text/plain;charset=UTF-8'},
+  body:JSON.stringify({action,...p,transport:{apikey:KEY,...(session?{token:session}:{})}})});
+}
+function apiConnectionError(action,timedOut){
+ const signingIn=['memberLogin','emailPoints','emailEnter'].includes(action);
+ if(signingIn)return timedOut?'Не удалось дождаться ответа при входе. Повторите вход. Если ошибка повторится, откройте сайт в Chrome или Safari либо переключитесь между Wi-Fi и мобильным интернетом.':'Не удалось связаться с сервером входа. Проверьте интернет; попробуйте Chrome или Safari либо другую сеть.';
+ if(action==='load')return timedOut?'Не удалось загрузить график вовремя. Нажмите «Обновить» и повторите загрузку.':'Нет связи с сервером. Проверьте интернет и обновите график.';
+ return timedOut?'Сервер не ответил вовремя. Нажмите «Обновить» и проверьте график перед повторным сохранением.':'Нет связи с сервером. Проверьте интернет и повторите действие.';
+}
 async function api(action,p={}){
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
  try{
   let r;
-  try{r=await fetch(API,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json',apikey:KEY,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...p})})}
-  catch{throw Error(controller.signal.aborted?'Сервер не ответил вовремя. Нажмите «Обновить» и проверьте график перед повторным сохранением.':'Нет связи с сервером. Проверьте интернет и повторите действие.')}
-  const v=await r.json().catch(()=>null);
+  try{r=await requestApi(action,p,token,controller.signal)}
+  catch{throw Error(apiConnectionError(action,controller.signal.aborted))}
+  const v=await r.json().catch(()=>{if(controller.signal.aborted)throw Error(apiConnectionError(action,true));return null});
   if(!r.ok){const e=Error(v?.error||'Сервер временно недоступен ('+r.status+'). Повторите позже.');e.status=r.status;e.code=v?.code;e.employee=v?.employee;throw e}
   if(!v||typeof v!=='object')throw Error('Сервер вернул неполный ответ. Повторите действие.');
   return v;
@@ -1138,7 +1150,7 @@ function settings(){
  }catch(e){E('status').textContent=e.message}
 }
 function paid(n){mutate('paid',{week:monday(E('week').value),employee:decodeURIComponent(n)})}
-function logout(){settleConfirmation(false);clearMemberCredentials();E('pointPicker').classList.add('hide');E('firstPasswordOverlay').classList.add('hide');E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';closeAssignment();let old=token;token='';writeAppToken('');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+old},body:JSON.stringify({action:'logout'})}).catch(()=>{})}
+function logout(){settleConfirmation(false);clearMemberCredentials();E('pointPicker').classList.add('hide');E('firstPasswordOverlay').classList.add('hide');E('firstPasswordNew').value='';E('firstPasswordRepeat').value='';closeAssignment();let old=token;token='';writeAppToken('');s=null;E('app').classList.add('hide');document.body.classList.remove('beta-in-app','has-mobile-help-nav');E('auth').classList.remove('hide');mode(true);if(old)requestApi('logout',{},old).catch(()=>{})}
 function togglePassword(id,btn){const x=E(id),shown=x.type==='password';x.type=shown?'text':'password';btn.textContent=shown?'◌':'◉';btn.setAttribute('aria-label',shown?'Скрыть пароль':'Показать пароль')}
 function showCode(id,code){const box=E(id);box.classList.remove('hide');box.innerHTML='<b>Сохраните новый резервный код:</b><div class="recovery-code">'+esc(code)+'</div><p class="formnote">Код показан только сейчас. Храните его отдельно от пароля — без него восстановить доступ нельзя.</p><button onclick="copyRecovery(\''+code+'\')">Скопировать код</button>'}
 function copyRecovery(code){
@@ -1482,7 +1494,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-15-service-dashboard-1';
+const CURRENT_BUILD='2026-10-15-mobile-login-transport-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
