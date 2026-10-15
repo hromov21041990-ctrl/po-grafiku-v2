@@ -250,7 +250,8 @@ else if(body.action==="assign"){
  const day=(parsed.getDay()+6)%7;
  if(!c.config.days.includes(day))return resp(origin,400,{error:"Нерабочий день"});
  const who=c.employees[idx];
- if(c.schedule.some((x:any)=>x.date===date&&(x.position===position||x.employee===who)))return resp(origin,409,{error:"Место занято или сотрудник уже назначен"});
+ // A person may cover two independently paid shift slots on the same day. Only a slot itself must remain unique.
+ if(c.schedule.some((x:any)=>x.date===date&&x.position===position))return resp(origin,409,{error:"Место на эту дату уже занято"});
  const jobs=Array.isArray(c.job_roles)?c.job_roles:[];
  const roleId=typeof body.jobRoleId==="string"?body.jobRoleId:"";
  const job=jobs.find((x:any)=>x.id===roleId);
