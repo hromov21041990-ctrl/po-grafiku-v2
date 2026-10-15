@@ -4,11 +4,12 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const date=v=>v?new Date(v).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Нет данных';
 let data=null,busy=false,requestVersion=0;
 $('month').value=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yekaterinburg',year:'numeric',month:'2-digit'}).format(new Date());
-function clearDashboard(){requestVersion++;data=null;$('dashboard').classList.add('hidden');for(const id of ['metrics','chart','points','insight'])$(id).replaceChildren()}
+let supportInbox=null;
+function clearDashboard(){supportInbox?.reset();requestVersion++;data=null;$('dashboard').classList.add('hidden');for(const id of ['metrics','chart','points','insight'])$(id).replaceChildren()}
 async function load(){if(busy)return;busy=true;const version=++requestVersion;$('refresh').disabled=true;$('month').disabled=true;$('export').disabled=true;$('status').textContent='Загружаем статистику…';
 try{if(!client)throw Error('Не загрузился модуль авторизации. Обновите страницу.');const {data:{session},error:authError}=await client.auth.getSession();if(authError)throw authError;if(!session){clearDashboard();$('loginPanel').classList.remove('hidden');$('status').textContent='';return}
 $('loginPanel').classList.add('hidden');const month=$('month').value;if(!/^\d{4}-\d{2}$/.test(month))throw Error('Выберите месяц');
-const response=await client.rpc('pvz2_service_dashboard',{p_month:month+'-01'});if(response.error)throw response.error;if(version!==requestVersion)return;data=response.data;render();$('dashboard').classList.remove('hidden');$('status').textContent='';
+const response=await client.rpc('pvz2_service_dashboard',{p_month:month+'-01'});if(response.error)throw response.error;if(version!==requestVersion)return;data=response.data;render();$('dashboard').classList.remove('hidden');$('status').textContent='';await supportInbox?.load();
 }catch(e){clearDashboard();$('status').textContent=e.code==='42501'?'Этому аккаунту недоступна панель сервиса. Войдите в приложение под аккаунтом владельца сервиса.':('Не удалось загрузить статистику: '+e.message);$('status').classList.add('error')}
 finally{busy=false;$('refresh').disabled=false;$('month').disabled=false;$('export').disabled=!data}}
 function render(){const points=data.points,total=k=>points.reduce((n,p)=>n+Number(p[k]||0),0);$('status').classList.remove('error');
@@ -23,5 +24,6 @@ function renderPoints(){$('pointCount').textContent='Показано '+filtered
 $('refresh').onclick=load;$('month').onchange=load;$('search').oninput=()=>data&&renderPoints();
 $('export').onclick=()=>{if(!data)return;const rows=[['Точка','ID','Сотрудники','Личные доступы','Администраторы','Последний вход'],...filtered().map(p=>[p.name,p.public_code,p.employees,p.member_accounts,p.admins,p.last_login||''])];const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replace(/"/g,'""')+'"').join(';')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='По_графику_сводка_'+data.month+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginBtn').disabled=true;$('loginError').textContent='';try{if(!client)throw Error('Не загрузился модуль авторизации');const {error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;$('password').value='';await load()}catch(e){$('loginError').textContent='Не удалось войти. Проверьте email и пароль.'}finally{$('loginBtn').disabled=false}};
-client?.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'){clearDashboard();$('loginPanel').classList.remove('hidden');$('status').textContent='Войдите снова.'}});
+client?.auth.onAuthStateChange(event=>{if(event==='SIGNED_IN'){clearDashboard();setTimeout(load,0)}if(event==='SIGNED_OUT'){clearDashboard();$('loginPanel').classList.remove('hidden');$('status').textContent='Войдите снова.'}});
+supportInbox=PGSupport.mount({root:$('supportInbox'),admin:true,context:async()=>{const {data:{session}}=await client.auth.getSession();if(!session)throw Error('Войдите в панель сервиса.');return {authToken:session.access_token,scope:session.user.id}},active:()=>!$('dashboard').classList.contains('hidden')});
 load();
