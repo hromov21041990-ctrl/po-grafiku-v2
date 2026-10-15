@@ -21,6 +21,59 @@ function reply(origin: string, status: number, value: unknown) {
     'access-control-allow-methods': 'POST,OPTIONS', 'vary': 'Origin',
   } });
 }
+// Telegram remains a parallel notification channel; the ticket database is the source of truth.
+// A failed Telegram request must never undo a successfully created support ticket.
+async function notifyTelegramForNewTicket(ticketId: string, ticket: {
+  company_code: string; category: string; title: string; message: string; sender_role: string
+}) {
+  const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN') || Deno.env.get('SUPPORT_TELEGRAM_BOT_TOKEN') || '';
+  const chatId = Deno.env.get('TELEGRAM_CHAT_ID') || Deno.env.get('SUPPORT_TELEGRAM_CHAT_ID') || '';
+  let sent = false;
+  let errorCode: string | null = null;
+  if (!botToken || !chatId) {
+    errorCode = 'telegram_secrets_missing';
+  } else {
+    const label: Record<string, string> = { bug: 'Ошибка', question: 'Вопрос', idea: 'Предложение', access: 'Вход и доступ' };
+    const text = [
+      '🆕 Новое обращение «По графику»',
+      'Номер: ' + ticketId.slice(0, 8),
+      'Точка: ' + (ticket.company_code || 'не указана'),
+      'Тип: ' + (label[ticket.category] || 'Обращение'),
+      'Отправитель: ' + (ticket.sender_role === 'owner' ? 'владелец' : ticket.sender_role === 'staff' ? 'сотрудник' : 'гость'),
+      '',
+      ticket.title.slice(0, 120),
+      ticket.message.slice(0, 2600),
+      '',
+      'Ответить: https://po-grafiku.ru/admin.html'
+    ].join('\n');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
+    try {
+      const result = await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text, link_preview_options: { is_disabled: true } }),
+        signal: controller.signal
+      });
+      sent = result.ok;
+      if (!sent) errorCode = 'telegram_http_' + result.status;
+    } catch (e) {
+      errorCode = e instanceof Error && e.name === 'AbortError' ? 'telegram_timeout' : 'telegram_network_error';
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  try {
+    // Record only the delivery outcome, never secrets or Telegram response bodies.
+    await db.from('pvz2_support_tickets').update({
+      telegram_notified_at: sent ? new Date().toISOString() : null,
+      telegram_delivery_error: errorCode
+    }).eq('id', ticketId).is('telegram_notified_at', null);
+  } catch {
+    // Notification status is best effort; do not interfere with support submissions.
+  }
+}
+
 async function budget(id: string, limit: number) {
   const { data, error } = await db.rpc('pvz2_support_consume', { p_key: id, p_limit: limit });
   check(error); if (!data) fail(429, 'Слишком много сообщений за час. Попробуйте позже.');
@@ -102,7 +155,13 @@ export async function handler(req: Request): Promise<Response> {
       }
       await budget(ipHash, 5); if (who!.hash) await budget(await digest('create:' + who!.hash), 5);
       const { data, error } = await db.rpc('pvz2_support_create', { p_ticket: { company_id: who!.companyId, owner_auth_uid: who!.ownerUid, company_code: who!.code || pointCode, category: v.category, title, message, contact_email: email, sender_role: who!.role }, p_requester: who!.hash, p_request_id: requestId });
-      check(error); return reply(origin, 200, { ok: true, ticketId: data });
+      check(error);
+      // Wait for this bounded delivery attempt so Edge shutdown cannot drop the notification.
+      // The ticket remains saved and the user receives success even if Telegram is unavailable.
+      await notifyTelegramForNewTicket(data, {
+        company_code: who!.code || pointCode, category: v.category, title, message, sender_role: who!.role
+      });
+      return reply(origin, 200, { ok: true, ticketId: data });
     }
     if (!admin && !who!.hash) fail(401, 'Войдите или откройте поддержку в браузере отправки.');
     if (v.action === 'adminCount') {
