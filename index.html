@@ -1031,7 +1031,7 @@ function exportMonthlyPayroll(){
 }
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
- const monthly=s.config.payrollMode==='monthly';E('payrollModeQuick').value=monthly?'monthly':'weekly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
+ const monthly=s.config.payrollMode==='monthly';E('payrollModeQuick').value=monthly?'monthly':'weekly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',!monthly);E('payrollWeekBox').classList.toggle('hide',monthly);if(monthly){renderMonthlyPayroll();return}
  const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
  E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
  const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
