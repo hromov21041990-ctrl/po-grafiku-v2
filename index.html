@@ -1488,7 +1488,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-15-support-inbox-1';
+const CURRENT_BUILD='2026-10-20-payroll-filters-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
