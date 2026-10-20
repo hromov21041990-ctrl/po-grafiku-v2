@@ -999,7 +999,8 @@ function renderMonthlyPayroll(){
  rows.map(x=>{const n=encodeURIComponent(x.name),a=x.advance;
  const advance=a.at?'<b>✓ Аванс выплачен '+rub(a.amount)+'</b><button class="small" onclick="monthlyAction(&quot;advance_unpaid&quot;,&quot;'+n+'&quot;)">Отменить аванс</button>':'<button class="small" onclick="monthlyAction(&quot;advance_paid&quot;,&quot;'+n+'&quot;)">Отметить аванс</button>';
  const salary=x.salary?'<b>✓ Зарплата выплачена '+rub(x.salary.amount)+'</b><button class="small" onclick="monthlyAction(&quot;salary_unpaid&quot;,&quot;'+n+'&quot;)">Отменить отметку</button>':x.net>0?'<button class="small" onclick="monthlyAction(&quot;salary_paid&quot;,&quot;'+n+'&quot;)">Выплачена зарплата</button>':'—';
- return '<tr><td>'+esc(x.name)+'</td><td>'+rub(x.gross)+'</td><td><input type="number" step=".01" min="-1000000" max="1000000" class="fine-input" value="'+x.fine+'" data-employee="'+n+'" aria-label="Штраф или возврат '+esc(x.name)+'" onchange="saveMonthlyFine(this)"></td><td><input type="number" min="0" max="1000000" step=".01" class="fine-input" value="'+Number(a.amount||0)+'" data-employee="'+n+'" aria-label="Аванс '+esc(x.name)+'" '+(a.at?'disabled':'onchange="saveAdvance(this)"')+'>'+advance+'</td><td class="sum">'+rub(x.net)+'</td><td>'+salary+'</td></tr>'}).join('')+
+ const paymentWarning=x.salary&&Math.abs(Number(x.salary.amount)-x.net)>.009?'<small class="payroll-warning">Сумма изменилась после выплаты — проверьте разницу</small>':'';
+ return '<tr><td>'+esc(x.name)+'</td><td>'+rub(x.gross)+'</td><td><input type="number" step=".01" min="-1000000" max="1000000" class="fine-input" value="'+x.fine+'" data-employee="'+n+'" aria-label="Штраф или возврат '+esc(x.name)+'" onchange="saveMonthlyFine(this)"></td><td><input type="number" min="0" max="1000000" step=".01" class="fine-input" value="'+Number(a.amount||0)+'" data-employee="'+n+'" aria-label="Аванс '+esc(x.name)+'" '+(a.at?'disabled':'onchange="saveAdvance(this)"')+'>'+advance+'</td><td class="sum">'+rub(x.net)+'</td><td>'+salary+paymentWarning+'</td></tr>'}).join('')+
  '<tr class="payroll-total"><td>Общий фонд</td><td>'+rub(rows.reduce((a,x)=>a+x.gross,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.fine,0))+'</td><td>'+rub(rows.reduce((a,x)=>a+x.advancePaid,0))+'</td><td class="sum">'+rub(rows.reduce((a,x)=>a+x.net,0))+'</td><td></td></tr></tbody></table>';
 }
 async function monthlyAction(op,encoded,amount=null){
@@ -1031,7 +1032,7 @@ function exportMonthlyPayroll(){
 }
 function renderPayroll(){
  if(!s||s.role!=='owner')return;
- const monthly=s.config.payrollMode==='monthly';E('payrollModeQuick').value=monthly?'monthly':'weekly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',monthly);E('payrollWeekBox').classList.toggle('hide',!monthly);if(monthly){renderMonthlyPayroll();return}
+ const monthly=s.config.payrollMode==='monthly';E('payrollModeQuick').value=monthly?'monthly':'weekly';E('payrollTitle').textContent=monthly?'Ежемесячная зарплата':'Еженедельные выплаты';E('payrollSubtitle').textContent=monthly?'Начисления, аванс и окончательная выплата за месяц':'Начисления по назначенным сменам выбранной недели';E('payrollMonthBox').classList.toggle('hide',!monthly);E('payrollWeekBox').classList.toggle('hide',monthly);if(monthly){renderMonthlyPayroll();return}
  const {rows,all,from,end}=payrollData(),paid=s.payments||{},period=all?'all':from;
  E('payrollPeriod').textContent=all?'Сводка за весь период · начисления, штрафы и возвраты':'Неделя '+from+' — '+end+' · расчёт из графика';
  const total=rows.reduce((a,x)=>a+x.gross,0),fineTotal=rows.reduce((a,x)=>a+x.fine,0);
@@ -1488,7 +1489,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-15-support-inbox-1';
+const CURRENT_BUILD='2026-10-20-payroll-filters-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;

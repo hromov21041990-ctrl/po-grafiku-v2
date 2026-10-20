@@ -1,0 +1,28 @@
+name: Payroll regression tests
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "login.html"
+      - "tests/payroll-*.test.ts"
+      - "tests/mobile-smoke.test.ts"
+      - ".github/workflows/payroll-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  payroll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out changes
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check weekly/monthly filters and monthly salary
+        run: deno test --allow-read tests/payroll-filters.test.ts tests/payroll-monthly.test.ts tests/mobile-smoke.test.ts
