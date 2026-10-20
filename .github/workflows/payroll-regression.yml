@@ -6,6 +6,7 @@ on:
       - "index.html"
       - "login.html"
       - "tests/payroll-*.test.ts"
+      - "tests/mobile-smoke.test.ts"
       - ".github/workflows/payroll-regression.yml"
   workflow_dispatch:
 
@@ -24,4 +25,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check weekly/monthly filters and monthly salary
-        run: deno test --allow-read tests/payroll-filters.test.ts tests/payroll-monthly.test.ts
+        run: deno test --allow-read tests/payroll-filters.test.ts tests/payroll-monthly.test.ts tests/mobile-smoke.test.ts
