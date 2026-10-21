@@ -472,7 +472,7 @@ body.member-credentials-open{overflow:hidden}
      <div class="formfield wide"><label for="role">Роль</label><select id="role"><option value="owner">Владелец</option><option value="staff">Сотрудник / Администратор</option></select></div>
      <div class="formfield wide"><label for="pass">Пароль</label><div class="pass-wrap"><input id="pass" type="password" autocomplete="current-password"><button type="button" aria-label="Показать пароль" onclick="togglePassword('pass',this)">◉</button></div></div>
     </div>
-    <p id="ownerLoginHint" class="formnote">Используйте пароль, который вы задали при регистрации <b>email-аккаунта</b>, а не пароль точки. Если Safari подставил другой пароль, выберите нужную запись в «Паролях».</p><button class="primary buttonwide" onclick="login()">Войти в график →</button><button id="forgotPasswordBtn" class="text-link" type="button" onclick="emailReset()">Забыли пароль владельца?</button><p id="staffLoginHint" class="formnote hide">Код точки, личный логин и пароль выдаёт владелец. Права определяются вашим аккаунтом.</p>
+    <p id="ownerLoginHint" class="formnote">Используйте пароль, который вы задали при регистрации <b>email-аккаунта</b>, а не пароль точки. Если Safari подставил другой пароль, выберите нужную запись в «Паролях».</p><button id="signinSubmitBtn" type="button" class="primary buttonwide" onclick="login()">Войти в график →</button><button id="forgotPasswordBtn" class="text-link" type="button" onclick="emailReset()">Забыли пароль владельца?</button><p id="staffLoginHint" class="formnote hide">Код точки, личный логин и пароль выдаёт владелец. Права определяются вашим аккаунтом.</p>
    </div>
    <div id="recoveryForm" class="hide"><h2>Восстановление доступа</h2><p class="formnote">Введите код точки, резервный код владельца и новый пароль. Резервный код выдаётся при регистрации или в настройках.</p><div class="grid-form"><div class="formfield wide"><label for="recoverCompany">Код точки</label><input id="recoverCompany" autocomplete="off"></div><div class="formfield wide"><label for="recoverCode">Резервный код</label><input id="recoverCode" autocomplete="off"></div><div class="formfield wide"><label for="recoverPassword">Новый пароль владельца</label><div class="pass-wrap"><input id="recoverPassword" type="password" autocomplete="new-password"><button type="button" aria-label="Показать пароль" onclick="togglePassword('recoverPassword',this)">◉</button></div></div></div><button class="primary buttonwide" onclick="recoverPassword()">Установить новый пароль</button><button class="text-link" onclick="showRecovery(false)">Назад ко входу</button></div><div id="recoveryResult" class="recovery-panel hide"></div>
    <div id="emailPasswordReset" class="hide"><h2>Создать новый пароль</h2><p class="formnote">Ссылка восстановления подтверждена. Придумайте новый пароль для входа по email.</p><label for="emailNewPassword">Новый пароль (от 10 символов)</label><div class="pass-wrap"><input id="emailNewPassword" type="password" autocomplete="new-password"><button type="button" onclick="togglePassword('emailNewPassword',this)">◉</button></div><label for="emailNewPasswordConfirm" style="margin-top:12px">Повторите новый пароль</label><div class="pass-wrap"><input id="emailNewPasswordConfirm" type="password" autocomplete="new-password"><button type="button" onclick="togglePassword('emailNewPasswordConfirm',this)">◉</button></div><button class="primary buttonwide" onclick="applyEmailPassword()">Сохранить новый пароль</button><p id="emailPasswordStatus" class="formnote" role="status"></p></div><p id="error" class="error" role="alert"></p>
@@ -1191,16 +1191,50 @@ function authErrorText(e){const code=String(e?.code||''),message=String(e?.messa
  if(/Auth session missing/i.test(message))return 'Ссылка восстановления недействительна или истекла. Запросите новое письмо.';
  return message;
 }
-async function login(){try{
- E('error').textContent='';
- if(E('role').value==='staff'){const q=await api('memberLogin',{code:E('signinCode').value.trim().toLowerCase(),login:E('memberLoginName').value.trim().toLowerCase(),password:E('pass').value});enter(q);return}
- if(!sb)throw Error('Не загрузилась авторизация');
- const email=E('emailLogin').value.trim().toLowerCase(),password=E('pass').value;
- if(!email||!password)throw Error('Введите email и пароль владельца.');
- const {error}=await sb.auth.signInWithPassword({email,password});
- if(error)throw error;
- if(!recoveryMode)await loadPoints();
- }catch(e){E('error').textContent=authErrorText(e)}
+// Guard against silent/duplicate presses on slow mobile networks.
+let loginBusy=false;
+async function login(){
+ if(loginBusy)return;
+ const alert=E('error'),button=E('signinSubmitBtn');
+ const staff=E('role').value==='staff';
+ const password=E('pass').value;
+ const code=staff?E('signinCode').value.trim().toLowerCase():'';
+ const member=staff?E('memberLoginName').value.trim().toLowerCase():'';
+ const email=staff?'':E('emailLogin').value.trim().toLowerCase();
+ alert.textContent='';
+ if(staff&&(!code||!member||!password)){alert.textContent='Заполните ID точки, личный логин и пароль сотрудника.';return}
+ if(!staff&&(!email||!password)){alert.textContent='Введите email и пароль владельца.';return}
+ if(!staff&&!sb){alert.textContent='Не загрузился модуль авторизации. Обновите страницу.';return}
+ loginBusy=true;
+ button.disabled=true;
+ button.textContent='Входим…';
+ alert.textContent='Проверяем данные для входа…';
+ try{
+  if(staff){
+   const q=await api('memberLogin',{code,login:member,password});
+   enter(q);
+   return;
+  }
+  // The Supabase SDK can wait indefinitely when the browser network is stalled.
+  // Bound the visible login attempt without modifying stored credentials/sessions.
+  let timer;
+  let signed;
+  try{
+   signed=await Promise.race([
+    sb.auth.signInWithPassword({email,password}),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Сервер входа не ответил за 20 секунд. Проверьте подключение и повторите попытку.')),20000)})
+   ]);
+  }finally{clearTimeout(timer)}
+  if(signed.error)throw signed.error;
+  if(!recoveryMode)await loadPoints();
+ }catch(e){
+  alert.textContent=staff?String(e?.message||'Ошибка входа. Повторите попытку.'):authErrorText(e);
+ }finally{
+  loginBusy=false;
+  button.disabled=false;
+  button.textContent='Войти в график →';
+  if(alert.textContent==='Проверяем данные для входа…')alert.textContent='';
+ }
 }
 function mode(b){if(recoveryMode)return showRecoveryPasswordForm();
  E('authTabs').classList.remove('hide');E('emailSignup').classList.toggle('hide',b);E('reg').classList.add('hide');E('signin').classList.toggle('hide',!b);E('regTab').classList.toggle('is-active',!b);E('signinTab').classList.toggle('is-active',b);E('error').textContent='';
