@@ -924,7 +924,7 @@ function draw(){
     if(!r)return '<td data-slot="Смена №'+(p+1)+'">'+(['owner','admin'].includes(s.role)?'<button class="slotbtn" onclick="chooseShift(\''+d+'\','+p+')">Свободно<small>＋ Назначить</small></button>':'<div class="slotbtn" style="cursor:default">Свободно</div>')+'</td>';
     return '<td data-slot="Смена №'+(p+1)+'"><div class="slot busy"><span class="person">'+esc(r.employee)+'</span>'+(r.jobRoleName?'<small class="job-shift-tag">'+esc(r.jobRoleName)+'</small>':'')+
       '<div class="shift-time">'+esc(r.start)+'–'+esc(r.end)+(r.kind==='half'?' · полсмены':'')+'</div>'+
-      (s.role==='owner'||r.employee===s.myEmployee&&Number.isFinite(r.pay)?'<span class="shift-pay">'+rub(r.pay)+'</span><br>':'')+(['owner','admin'].includes(s.role)?'<button class="remove-btn" onclick="removeShift(\''+r.id+'\')">Снять запись</button>':'')+
+      (s.role==='owner'||r.employee===s.myEmployee&&Number.isFinite(r.pay)?'<span class="shift-pay">'+rub(r.pay)+'</span><br>':'')+(['owner','admin'].includes(s.role)?'<button type="button" class="remove-btn" onclick="removeShift(\''+r.id+'\')">Снять запись</button>':'')+
       '</div></td>';
    }).join('')+'</tr>';
  }).join('');
@@ -941,7 +941,7 @@ function draw(){
   const slots=day.open?Array.from({length:s.config.positions},(_,p)=>{
    const item=dayRows.find(v=>v.position===p);
    if(!item)return '<div class="mobile-slot"><b>Смена №'+(p+1)+'</b>'+(['owner','admin'].includes(s.role)?'<button type="button" class="slotbtn" onclick="chooseShift(\''+d+'\','+p+')">Свободно<small>＋ Назначить</small></button>':'<div class="slotbtn" style="cursor:default">Свободно</div>')+'</div>';
-   return '<div class="mobile-slot"><b>Смена №'+(p+1)+'</b><div class="slot busy"><span class="person">'+esc(item.employee)+'</span>'+(item.jobRoleName?'<small class="job-shift-tag">'+esc(item.jobRoleName)+'</small>':'')+'<div class="shift-time">'+esc(item.start)+'–'+esc(item.end)+(item.kind==='half'?' · полсмены':'')+'</div>'+(s.role==='owner'||item.employee===s.myEmployee&&Number.isFinite(item.pay)?'<span class="shift-pay">'+rub(item.pay)+'</span><br>':'')+(['owner','admin'].includes(s.role)?'<button class="remove-btn" onclick="removeShift(\''+item.id+'\')">Снять запись</button>':'')+'</div></div>';
+   return '<div class="mobile-slot"><b>Смена №'+(p+1)+'</b><div class="slot busy"><span class="person">'+esc(item.employee)+'</span>'+(item.jobRoleName?'<small class="job-shift-tag">'+esc(item.jobRoleName)+'</small>':'')+'<div class="shift-time">'+esc(item.start)+'–'+esc(item.end)+(item.kind==='half'?' · полсмены':'')+'</div>'+(s.role==='owner'||item.employee===s.myEmployee&&Number.isFinite(item.pay)?'<span class="shift-pay">'+rub(item.pay)+'</span><br>':'')+(['owner','admin'].includes(s.role)?'<button type="button" class="remove-btn" onclick="removeShift(\''+item.id+'\')">Снять запись</button>':'')+'</div></div>';
   }).join(''):'<div class="mobile-no-work">В этот день точка не работает</div>';
   return '<details class="mobile-day'+(day.dow>=5?' mobile-weekend':'')+(d===today?' mobile-today':'')+'" data-date="'+d+'"'+(open?' open':'')+'><summary><span class="mobile-day-date"><strong>'+weekday+'</strong><small>'+fmt(d)+'</small></span><span class="mobile-day-count"><b>'+status+'</b><small>'+remaining+'</small></span><span class="mobile-chevron" aria-hidden="true">›</span></summary><div class="mobile-day-content">'+slots+'</div></details>';
  }).join('');
@@ -1092,8 +1092,9 @@ async function payrollMark(operation,encoded){
  if(await appConfirm(operation==='mark'?'Подтвердить выплату сотруднику '+name+'?':'Снять отметку выплаты сотруднику '+name+'?'))payrollAction(operation,name);
 }
 async function mutate(action,p){
- if(!s||mutateBusy)return;
+ if(!s||mutateBusy){if(action==='remove')appNotice('График обновляется или другое изменение ещё сохраняется. Повторите действие.');return}
  mutateBusy=true;let needSync=false,assignmentMessage='';
+ if(action==='remove')appNotice('Снимаем смену, проверяем сохранение…');
  const session=token;
  try{
   const r=await api(action,{...p,expectedVersion:s.version});
@@ -1102,12 +1103,14 @@ async function mutate(action,p){
   draw();syncLabel('Сохранено и синхронизировано · '+syncClock(),'ok');
   E('status').textContent='Сохранено. Остальные устройства увидят изменение автоматически.';
   if(action==='assign'){E('assignmentError').textContent='';closeAssignment()}
+  if(action==='remove')appNotice('Смена снята. Изменение сохранено в графике.');
   if(action==='settings'){E('owner').classList.add('hide');renderMemberAccess()}
  }catch(e){
   if(session!==token)return;
   const message=String(e.message||'Ошибка сохранения');
   needSync=/изменил|изменился|изменены|занято|назначен|Обновите страницу|не найдена/i.test(message);
   E('status').textContent='Не сохранено: '+message+(needSync?' Загружаем свежий график.':'');
+  if(action==='remove')appNotice('Не удалось снять смену: '+message+(needSync?' График обновляется, повторите действие.':''));
   if(action==='assign'){assignmentMessage=message;showAssignmentError(message)}
  }finally{
   mutateBusy=false;
@@ -1139,7 +1142,19 @@ async function saveAssignment(){
  try{await mutate('assign',{date,position,employeeIndex,kind,start,end,jobRoleId:role})}
  finally{button.disabled=false;button.textContent='Сохранить назначение'}
 }
-async function removeShift(id){if(!s||!['owner','admin'].includes(s.role))return;if(await appConfirm('Снять сотрудника со смены?'))mutate('remove',{id})}
+async function removeShift(id){
+ if(!s||!token){appNotice('Сеанс завершён. Войдите снова, чтобы изменить смену.');return}
+ if(!['owner','admin'].includes(s.role)){appNotice('Снимать смены могут владелец и администратор точки.');return}
+ if(mutateBusy){appNotice('Другое изменение ещё сохраняется. Повторите действие после завершения.');return}
+ const shift=(s.schedule||[]).find(x=>x.id===id);
+ if(!shift){appNotice('Смена уже изменена на другом устройстве. Обновляем график.');await syncNow(true);return}
+ try{
+  const agreed=await appConfirm('Снять '+shift.employee+' со смены '+shift.date+' ('+shift.start+'–'+shift.end+')?');
+  if(!agreed)return;
+  if(mutateBusy){appNotice('Другое изменение ещё сохраняется. Повторите действие после завершения.');return}
+  await mutate('remove',{id});
+ }catch(e){appNotice('Не удалось снять смену: '+String(e?.message||'неизвестная ошибка'))}
+}
 function settings(){
  if(editVersion!==s.version){E('status').textContent='Данные точки изменились. Закройте настройки и откройте снова.';return}
  try{
@@ -1523,7 +1538,7 @@ if(sb)sb.auth.getSession().then(async({data,error})=>{
 </script>
 <div id="updateNotice" hidden role="status"><span>Доступна новая версия «По графику».</span><button type="button" onclick="updateAppNow()">Обновить</button></div>
 <script>
-const CURRENT_BUILD='2026-10-20-payroll-filters-1';
+const CURRENT_BUILD='2026-10-21-admin-remove-feedback-1';
 let lastUpdateCheck=0;
 async function checkAppUpdate(force=false){
  if(!force&&Date.now()-lastUpdateCheck<30000)return;
