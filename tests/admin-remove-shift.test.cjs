@@ -7,7 +7,7 @@ const vm=require('node:vm');
 function harness(path){
  const html=fs.readFileSync(path,'utf8');
  for(const snippet of [
-  /<button type="button" class="remove-btn" onclick="removeShift\\\('/,
+  /<button type="button" class="remove-btn" onclick="removeShift\(/,
   /#previewConfirmation\{z-index:400\}/,
   /onclick="settleConfirmation\(true\)"/,
  ])assert.match(html,snippet,'Missing modal or button wiring: '+path);
