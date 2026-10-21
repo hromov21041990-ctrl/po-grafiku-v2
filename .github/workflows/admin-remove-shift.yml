@@ -1,0 +1,22 @@
+name: Admin shift removal regression
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'login.html'
+      - 'tests/admin-remove-shift.test.cjs'
+      - '.github/workflows/admin-remove-shift.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test admin shift removal without modifying live data
+        run: node tests/admin-remove-shift.test.cjs
