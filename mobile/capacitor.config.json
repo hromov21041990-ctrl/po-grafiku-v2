@@ -1,0 +1,10 @@
+{
+  "appId": "ru.pografiku.app",
+  "appName": "По графику",
+  "webDir": "www",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "capacitor",
+    "androidScheme": "https"
+  }
+}

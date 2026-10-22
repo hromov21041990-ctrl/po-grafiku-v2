@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false}});
 const KEY="sb_publishable_eIWwXJEBGxYAbnhOc-MKfw_NitfQtB_";
-const origins=new Set(["https://hromov21041990-ctrl.github.io","https://grafik.hromov-aa.chatgpt.site","https://po-grafiku.ru"]);
+const origins=new Set(["https://hromov21041990-ctrl.github.io","https://grafik.hromov-aa.chatgpt.site","https://po-grafiku.ru","capacitor://localhost","https://localhost"]);
 function resp(origin:string,status:number,value:unknown){return new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json;charset=utf-8","access-control-allow-origin":origin,"access-control-allow-headers":"authorization,apikey,content-type","access-control-allow-methods":"POST,OPTIONS","cache-control":"no-store"}})}
 const asObj=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v);
 const hex=(b:Uint8Array)=>Array.from(b,x=>x.toString(16).padStart(2,"0")).join("");
