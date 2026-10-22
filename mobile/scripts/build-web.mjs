@@ -15,6 +15,7 @@ export const WEBSITE_RETURN_URL = 'https://po-grafiku.ru/index.html';
 export const MOBILE_AUTH_REWRITES = Object.freeze([
   ["emailRedirectTo:location.origin+location.pathname", "emailRedirectTo:'" + WEBSITE_RETURN_URL + "'"],
   ["redirectTo:location.origin+location.pathname", "redirectTo:'" + WEBSITE_RETURN_URL + "'"],
+  ["new URL(location.origin+location.pathname)", "new URL('" + WEBSITE_RETURN_URL + "')"],
 ]);
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
