@@ -17,10 +17,11 @@ test('web asset allowlist contains no backend or secret files', () => {
 });
 
 test('native sign-up and recovery links use approved public website', () => {
-  const example = 'emailRedirectTo:location.origin+location.pathname;redirectTo:location.origin+location.pathname;';
+  const example = 'emailRedirectTo:location.origin+location.pathname;redirectTo:location.origin+location.pathname;new URL(location.origin+location.pathname)';
   const result = rewriteMobileAuth(example, 'test.html');
   assert.ok(result.includes(WEBSITE_RETURN_URL));
   assert.ok(!result.includes('location.origin+location.pathname'));
+  assert.ok(result.includes("new URL('" + WEBSITE_RETURN_URL + "')"));
   assert.throws(() => rewriteMobileAuth('changed auth code', 'test.html'));
 });
 
@@ -33,4 +34,5 @@ test('build copies public assets without changing website sources', async () => 
   assert.ok(!(await readFile(path.join(root, 'index.html'), 'utf8')).localeCompare(source));
   assert.ok(!mobile.includes('emailRedirectTo:location.origin+location.pathname'));
   assert.ok(!mobile.includes('redirectTo:location.origin+location.pathname'));
+  assert.ok(!mobile.includes('new URL(location.origin+location.pathname)'));
 });
