@@ -51,6 +51,10 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
+      - name: Apply branded iOS app icon
+        working-directory: mobile
+        run: npm run prepare:ios:icon
+
       - name: Build iOS Simulator application without signing
         working-directory: mobile/ios
         run: |
