@@ -1,0 +1,9 @@
+# Only generated artifacts; native projects (ios/, android/) should eventually be versioned.
+/node_modules/
+/www/
+*.log
+/android/.gradle/
+/android/local.properties
+/ios/Pods/
+/ios/App/Pods/
+/ios/DerivedData/
