@@ -5,7 +5,7 @@ const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const key = 'sb_publishable_eIWwXJEBGxYAbnhOc-MKfw_NitfQtB_';
 const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-const origins = new Set(['https://po-grafiku.ru', 'https://hromov21041990-ctrl.github.io', 'https://grafik.hromov-aa.chatgpt.site']);
+const origins = new Set(['https://po-grafiku.ru', 'https://hromov21041990-ctrl.github.io', 'https://grafik.hromov-aa.chatgpt.site', 'capacitor://localhost', 'https://localhost']);
 const ticketFields = 'id,company_id,company_code,category,title,message,contact_email,sender_role,status,created_at,updated_at,support_version,last_user_at,last_admin_at,admin_seen_at,user_seen_at';
 const eventFields = 'id,ticket_id,kind,sender,body,status,created_at';
 const hex = (v: Uint8Array) => Array.from(v, x => x.toString(16).padStart(2, '0')).join('');
