@@ -34,7 +34,7 @@ for (const image of spec.images || []) {
   const pixels = logical*scale;
   if (!Number.isInteger(pixels) || pixels < 16 || pixels > 2048) throw Error('Invalid AppIcon size');
   if (!image.filename) image.filename = 'AppIcon-'+pixels+'.png';
-  if (!/^[a-z0-9_.-]+\.png$/i.test(image.filename)) throw Error('Unsafe icon filename');
+  if (!/^[a-z0-9_.@+-]+\.png$/i.test(image.filename)) throw Error('Unsafe icon filename');
   await sharp(svg,{density: 600}).resize(pixels,pixels).flatten({background:'#E6F9F3'}).png().toFile(path.join(iconSet,image.filename));
   generated++;
 }
