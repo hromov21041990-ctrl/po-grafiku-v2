@@ -1,0 +1,38 @@
+name: Preserve verified Android beta download
+on:
+  push:
+    branches: [feat/mobile-install]
+    paths: ['.github/workflows/preserve-android-beta.yml']
+permissions:
+  contents: read
+jobs:
+  preserve:
+    if: github.ref == 'refs/heads/feat/mobile-install'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+      - name: Retrieve exact previously audited build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: po-grafiku-android-debug
+          path: ${{ runner.temp }}/verified-beta
+          github-token: ${{ github.token }}
+          run-id: 39738330989
+      - name: Verify immutable APK bytes and preserve on website branch
+        env:
+          APK_SOURCE: ${{ runner.temp }}/verified-beta/app-debug.apk
+        run: |
+          echo "e436213c96a821b683c88966d5cf51367a7161c9a38dce820ba2a85f070717d2  $APK_SOURCE" | sha256sum --check --strict
+          cp "$APK_SOURCE" downloads/po-grafiku-0.1-beta-debug.apk
+          node tests/mobile-install.test.cjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add downloads/po-grafiku-0.1-beta-debug.apk
+          git commit -m 'chore: preserve verified Android beta APK bytes'
+          git push origin HEAD:refs/heads/feat/mobile-install

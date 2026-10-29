@@ -1,0 +1,22 @@
+name: Mobile installation download checks
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'login.html'
+      - 'install.*'
+      - 'downloads/**'
+      - 'tests/mobile-install.test.cjs'
+      - '.github/workflows/mobile-install.yml'
+permissions:
+  contents: read
+jobs:
+  installation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/mobile-install.test.cjs
