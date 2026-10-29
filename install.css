@@ -1,0 +1,26 @@
+.mobile-install{margin:22px 0;padding:20px;background:#fff;border:1px solid #b9dfd3;border-radius:18px;box-shadow:0 8px 25px #0f2d3d08;color:#0f2d3d}
+.mobile-install h2{font-size:21px;line-height:1.3;margin:0 0 8px;letter-spacing:-.4px}
+.mobile-install p{font-size:14px;line-height:1.5;margin:8px 0}
+.mobile-install .mobile-install-warning{background:#fff5dc;border-radius:10px;padding:10px;color:#644600;font-size:12px}
+.mobile-install-warning strong{display:block}
+.mobile-install-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.mobile-install-button{display:flex;align-items:center;justify-content:center;min-height:50px;padding:12px 14px;border-radius:12px;text-align:center;text-decoration:none;font:700 14px/1.35 system-ui,sans-serif;box-sizing:border-box}
+.mobile-install-android{background:#087c60;color:#fff;border:2px solid #087c60}
+.mobile-install-iphone{background:#0f2d3d;color:#fff;border:2px solid #0f2d3d}
+.mobile-install-button:hover{filter:brightness(1.12)}
+.mobile-install a:focus-visible,.install-page a:focus-visible{outline:3px solid #1474c4;outline-offset:4px}
+.mobile-install .mobile-install-note{font-size:12px;color:#536f80}
+.mobile-install-guide{font-size:13px;font-weight:650;color:#086b54;text-underline-offset:3px}
+@media(max-width:480px){.mobile-install{margin:16px 0 0;padding:16px}.mobile-install-actions{grid-template-columns:1fr}.mobile-install-button{width:100%}}
+.install-page{margin:0;background:#edf7f3;color:#0f2d3d;font:16px/1.65 system-ui,sans-serif}
+.install-page main{max-width:760px;margin:auto;padding:24px 18px 60px}
+.install-page h1{font-size:clamp(26px,5vw,38px);line-height:1.2;margin:24px 0}
+.install-page h2{font-size:25px;line-height:1.3}
+.install-page section{scroll-margin-top:20px;background:#fff;border:1px solid #b9dfd3;border-radius:18px;padding:24px;margin:20px 0}
+.install-page a{color:#086b54;overflow-wrap:anywhere}
+.install-page .mobile-install-button{color:#fff}
+.install-page li{margin:12px 0}
+.install-page ol{padding-left:24px}
+.install-page code{font-size:12px;overflow-wrap:anywhere;word-break:break-all}
+.install-page .install-warning{padding:14px;background:#fff5dc;border-radius:12px;color:#644600}
+@media(max-width:480px){.install-page section{padding:18px}.install-page main{padding-inline:12px}}
