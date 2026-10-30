@@ -20,7 +20,7 @@ Do not overwrite these bytes; publish later versions under new filenames.
 
 ## Remaining release gates
 
-Real-device authentication and employee operations have not been verified. Native-origin backend support is not deployed. Confirmation/recovery returns to the website; native deep links are not implemented. Do not use this debug APK with real business data.
+One user reported on 2026-10-30 that real-device login, schedule usage, shift assignment/removal, weekly and monthly payroll, session persistence after app close, admin role, and support ticket submission worked on an Android phone. This is user-reported manual testing, not independently verified; no device model, exact installed APK hash, or additional device and role coverage was provided. Native-origin backend support is not deployed. Confirmation/recovery returns to the website; native deep links are not implemented. Do not use this debug APK with real business data.
 
 The original workflow uses npm install without a lockfile and floating Capacitor 8 ranges/action tags. Therefore a new run is not a reproducible rebuild of this exact APK. This publication preserves the verified original bytes instead of silently generating a different debug key or binary. Signature verification and source comparison are not a malware scan or a complete dependency security audit.
 

@@ -13,12 +13,14 @@ for (const path of ['index.html', 'login.html']) {
  assert.ok(auth.includes('href="'+apk+'" download='), path + ': public download before login');
  assert.ok(auth.includes('href="install.html#iphone"'), path + ': iPhone instructions before login');
  assert.ok(auth.includes('без реальных данных'), path + ': beta limitation visible before download');
+ assert.ok(auth.includes('30.10.2026') && auth.includes('одном Android-устройстве'), path + ': user manual QA attribution must remain scoped to one device');
  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
   if (!/src=|type="application\/ld\+json"/.test(match[1])) new vm.Script(match[2], {filename:path});
  }
 }
 const instructions = fs.readFileSync('install.html', 'utf8');
 assert.ok(instructions.includes(digest));
+assert.ok(instructions.includes('По отчёту пользователя от 30.10.2026') && instructions.includes('других устройствах'), 'Install guide must not imply broad Android approval');
 assert.ok(!instructions.includes('<script'), 'Instructions need neither JavaScript nor login');
 for (const text of ['id="iphone"', 'Safari', 'Поделиться', 'На экран Домой', 'Открыть как веб-приложение', 'Добавить', 'id="android"', apk]) assert.ok(instructions.includes(text), text);
 assert.ok(fs.readFileSync('install.css','utf8').includes('@media(max-width:480px)'));
