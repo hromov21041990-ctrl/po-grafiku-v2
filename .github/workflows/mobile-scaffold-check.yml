@@ -1,0 +1,29 @@
+name: Mobile scaffold check
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'supabase/functions/pvz-v2-rbac/index.ts'
+      - 'supabase/functions/pvz2-support/index.ts'
+      - '.github/workflows/mobile-scaffold-check.yml'
+  workflow_dispatch:
+jobs:
+  mobile-source-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate scaffold and produce public mobile bundle
+        working-directory: mobile
+        run: npm test
+      - name: Verify native origins are still allowlisted in both Edge Functions
+        shell: bash
+        run: |
+          grep -q 'capacitor://localhost' supabase/functions/pvz-v2-rbac/index.ts
+          grep -q 'https://localhost' supabase/functions/pvz-v2-rbac/index.ts
+          grep -q 'capacitor://localhost' supabase/functions/pvz2-support/index.ts
+          grep -q 'https://localhost' supabase/functions/pvz2-support/index.ts

@@ -1,0 +1,151 @@
+name: Publish signed iOS app to TestFlight
+
+# Manual, credential-gated release only. No production website deploy.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight-release
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Archive, sign and upload iOS IPA
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: testflight
+    env:
+      APP_BUNDLE_ID: ru.pografiku.app
+      APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      PROFILE_NAME: ${{ secrets.IOS_DISTRIBUTION_PROFILE_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify signing and App Store Connect credentials are present
+        env:
+          SIGNING_P12: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROVISION_PROFILE: ${{ secrets.IOS_DISTRIBUTION_PROFILE_BASE64 }}
+          ASC_P8: ${{ secrets.IOS_ASC_API_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          for key in APPLE_TEAM_ID PROFILE_NAME SIGNING_P12 SIGNING_PASSWORD PROVISION_PROFILE ASC_P8 ASC_KEY_ID ASC_ISSUER_ID; do
+            if [[ -z "${!key:-}" ]]; then
+              echo "::error::Missing GitHub Actions secret for $key. See mobile/TESTFLIGHT.md"
+              exit 1
+            fi
+          done
+
+      - name: Install dependencies, validate, generate native app
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          npm test
+          npx cap add ios
+          npx cap sync ios
+          npm run prepare:ios:icon
+
+      - name: Import distribution certificate and provisioning profile
+        id: codesign
+        env:
+          SIGNING_P12: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROVISION_PROFILE: ${{ secrets.IOS_DISTRIBUTION_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          security create-keychain -p "$RUNNER_TEMP" ios-release.keychain-db
+          security set-keychain-settings -lut 21600 ios-release.keychain-db
+          security unlock-keychain -p "$RUNNER_TEMP" ios-release.keychain-db
+          security list-keychains -d user -s ios-release.keychain-db login.keychain-db
+          printf '%s' "$SIGNING_P12" | base64 -D > "$RUNNER_TEMP/distribution.p12"
+          security import "$RUNNER_TEMP/distribution.p12" -k ios-release.keychain-db -P "$SIGNING_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$RUNNER_TEMP" ios-release.keychain-db
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$PROVISION_PROFILE" | base64 -D > "$RUNNER_TEMP/appstore.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/appstore.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
+          PROVIDED_NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
+          if [[ "$PROVIDED_NAME" != "$PROFILE_NAME" ]]; then
+            echo "::error::Provisioning profile name does not match IOS_DISTRIBUTION_PROFILE_NAME"
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/appstore.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/appstore.mobileprovision"
+
+      - name: Build signed App Store archive
+        working-directory: mobile/ios
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PoGrafiku.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            MARKETING_VERSION='0.1.0'
+
+      - name: Export signed IPA
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>TEAM_ID_TO_REPLACE</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>BUNDLE_ID_TO_REPLACE</key><string>PROFILE_NAME_TO_REPLACE</string>
+            </dict>
+          </dict></plist>
+          PLIST
+          /usr/libexec/PlistBuddy -c "Set :teamID $APPLE_TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:BUNDLE_ID_TO_REPLACE $PROFILE_NAME" "$RUNNER_TEMP/ExportOptions.plist"
+          # Replace the placeholder dictionary key, NOT the supplied profile name
+          sed -i '' "s|BUNDLE_ID_TO_REPLACE|$APP_BUNDLE_ID|g" "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/PoGrafiku.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa"
+          test -f "$RUNNER_TEMP/ipa/App.ipa"
+
+      - name: Upload IPA to App Store Connect / TestFlight
+        env:
+          ASC_P8: ${{ secrets.IOS_ASC_API_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$ASC_P8" | base64 -D > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          xcrun altool --upload-app --type ios \
+            --file "$RUNNER_TEMP/ipa/App.ipa" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Report next step
+        if: success()
+        run: echo "IPA uploaded to App Store Connect. Complete processing, compliance and TestFlight tester invitation in App Store Connect."
+
+      - name: Remove temporary signing keychain
+        if: always()
+        run: security delete-keychain ios-release.keychain-db || true

@@ -1,0 +1,84 @@
+name: iOS simulator build (mobile beta)
+
+on:
+  push:
+    branches:
+      - feature/mobile-capacitor-scaffold-20261022
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ios-simulator.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ios-simulator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-simulator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-simulator:
+    name: Build iOS simulator app (not for device)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Identify Xcode version
+        run: xcodebuild -version
+
+      - name: Install Capacitor dependencies
+        working-directory: mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Test and build mobile web bundle
+        working-directory: mobile
+        run: npm test
+
+      - name: Generate iOS native project
+        working-directory: mobile
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Apply branded iOS app icon
+        working-directory: mobile
+        run: npm run prepare:ios:icon
+
+      - name: Build iOS Simulator application without signing
+        working-directory: mobile/ios
+        run: |
+          xcodebuild \
+            -project App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Zip simulator application
+        working-directory: mobile/ios
+        run: |
+          cd build/DerivedData/Build/Products/Debug-iphonesimulator
+          test -d App.app
+          /usr/bin/zip -qry "$GITHUB_WORKSPACE/po-grafiku-ios-simulator.zip" App.app
+
+      - name: Upload iOS simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: po-grafiku-ios-simulator
+          path: po-grafiku-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
